@@ -1,10 +1,6 @@
 package controllers
 
-import models.Card
-import models.Hat
-import models.User
-import models.ThinkingSession
-import models.forms.FormCard
+import models._
 import play.api.Logger
 import play.api.data.Form
 import play.api.data.Forms.mapping
@@ -15,6 +11,8 @@ import play.api.libs.json.Json
 import play.api.libs.json.Json.toJsFieldJsValueWrapper
 import play.api.mvc.Action
 import play.api.mvc.Controller
+import java.util.Date
+import ws.wamplay.controllers.WAMPlayServer
 
 /**
  * Card Controller responsible for handling CRUD operations on ideas/cards (will be treated as synonyms,
@@ -24,130 +22,80 @@ import play.api.mvc.Controller
  */
 object Cards extends Controller {
 
-  /**
-   * Form to create a card
-   */
-  val cardForm = Form(
-    mapping(
-      "content" -> nonEmptyText,
-      "hat" -> nonEmptyText)(FormCard.apply)(FormCard.unapply))
+  def createBucket(id: Long) = Action { implicit request =>
 
-  /**
-   * Needed Info from HTML Params or (browser)session/user info:
-   * - HatID : Long  		Dummy for now
-   * - UserID : Long		Dummy for now
-   * - content : String
-   * Content needs to be a string obviously.
-   * To use this endpoint see CardForm (below)
-   */
-  def addCard(thinkingSessionId: Long) = Action { implicit request =>
-    Logger.debug("Cards.addCard")
-    request.cookies.get(User.idCookie) match {
-      case Some(cookie) => {
-        val form = cardForm.bindFromRequest.get
-        val user = User.byCookie(cookie).get;
-        val cardId = Card.create(form, thinkingSessionId, User.dummyId, 0, 0, None, None)
-        Logger.debug("Found user cookie, creating card " + cardId)
-        Redirect(routes.ThinkingSessions.index(thinkingSessionId))
+    val user =
+      request.cookies.get(User.idCookie) match {
+        case Some(cookie) => User.byCookie(cookie)
+        case None         => None
       }
-      case None => {
-        Logger.debug("No user cookie, bad request")
-        BadRequest
-      }
+    ThinkingSession.byId(id) match {
+      case Some(session) =>
+        if (ThinkingSession.checkUser(session, user)) {
+          val bucketId = Bucket.create(session)
+          Logger.debug("Creating Bucket for session " + id + " with bucket.id = " + bucketId)
+          val bucket = Bucket.byId(bucketId)
+          val eventId = Event.create("createBucket", session, session.currentHat, user, None, bucket, new Date())
+          val event = Event.byId(eventId);
+          WebSocket.publishEvent(event, id)
+          Ok(bucket.get.asJson).as("application/json")
+        } else BadRequest
+      case None => NotFound
     }
   }
 
-  /**
-   * Handles adding cards for a remote procedure call
-   */
-  def addCardRPC(content: String, thinkingSession: ThinkingSession, hat: Hat, creator: User) = {
-    Logger.debug("Cards.addCard")
-    val cardId = Card.create(content, thinkingSession, hat, creator, 0, 0, None, None)
-    Logger.debug("Creating card thru RPC with id: " + cardId)
-    Redirect(routes.ThinkingSessions.index(thinkingSession.id))
-  }
-
-  /**
-   * TODO: retrieve card specified by session id and card id from db and update id. Redirect to session index
-   * Needed Info from HTML Params:
-   * - newContent: String
-   */
-  def editCard(sessionId: Long, cardId: Long) = TODO
-
-  /**
-   * TODO: delete Card specified by the ids, redirect to session index
-   */
-  def deleteCard(sessionId: Long, cardId: Long) = TODO
-
-  def restFormAddCard(sessionId: Long) = Action { implicit request =>
-    Logger.debug("Cards.restFormAddCards(" + sessionId + ")")
-    val formCard = cardForm.bindFromRequest.get
-    request.cookies.get(User.idCookie) match {
-      case Some(cookie) => {
-        val user = User.byCookie(cookie).get;
-        val hat = Hat.byName(formCard.hat);
-        val cardId = Card.create(formCard.content, sessionId, hat.id, user.id, 0, 0, None, None);
-        Ok(Json.obj("id" -> cardId,
-          "hat" -> hat.name.toLowerCase,
-          "content" -> formCard.content,
-          "username" -> user.name)).as("application/json")
-      }
-      case None => {
-        Logger.debug("No user cookie, bad request")
-        BadRequest(Json.obj("error" -> "no user")).as("application/json")
-      }
+  def addCardToBucket(bucketId: Long, cardId: Long) = Action { implicit request =>
+    val user = request.cookies.get(User.idCookie) match {
+      case Some(cookie) => // found user cookie
+        User.byCookie(cookie)
+      case None => None
     }
+
+    val bucket = Bucket.byId(bucketId)
+    Bucket.addCard(bucketId, cardId);
+    val session = ThinkingSession.byId(bucket.get.sessionId).get;
+    val card = Card.byId(cardId)
+    val eventId = Event.create("addCardToBucket", session, session.currentHat, user, card, bucket, new Date())
+    val event = Event.byId(eventId)
+    val topicName = controllers.WebSocket.getTopicName(session.id);
+    WebSocket.publishEvent(event.get, session.id)
+    Ok
+
   }
-  def restJsonAddCard(sessionId: Long, hatId: Long) = Action(parse.json) { implicit request =>
-    Logger.debug("Cards.restAddCard")
-    val formCard = cardForm.bindFromRequest.get
-    (request.body) match {
-      case body: JsObject =>
-        body \ "name" match {
-          case JsString(name) =>
-            if (name == "content") {
-              request.body \ "value" match {
-                case JsString(content) =>
-                  request.cookies.get(User.idCookie) match {
-                    case Some(cookie) => {
-                      val user = User.byCookie(cookie).get;
-                      val hat = Hat.byId(hatId)
-                      val cardId = Card.create(content, sessionId, hatId, user.id, 0, 0, None, None)
 
-                      val json = Json.obj(
-                        "status" -> 200,
-                        "fn" -> "createCard",
-                        "args" -> Json.obj(
-                          "id" -> cardId,
-                          "hat" -> hat.get.name,
-                          "content" -> content,
-                          "user" -> user.name))
-                      Ok(Json.obj("content" -> json)).as("application/json")
+  // no return necessary
+  def renameBucket(bucketId: Long) = Action { implicit request =>
+    Logger.debug("Rename Bucket " + bucketId)
+    val user = request.cookies.get(User.idCookie) match {
+      case Some(cookie) => // found user cookie
+        User.byCookie(cookie)
+      case None => None
+    }
 
-                    }
-                    case None => {
-                      Logger.debug("No user cookie, bad request")
-                      BadRequest(Json.obj("error" -> true,
-                        "message" -> "Could not find user cookie")).as("application/json")
-                    }
-                  }
+    val name = request.body.asFormUrlEncoded match {
+      case Some(map) => map.get("name")
+      case None      => None
+    }
 
-                case _ => BadRequest(Json.obj("error" -> true,
-                  "message" -> "Could not find JSOn elem \"value\" =(")).as("application/json")
-              }
-            } else {
-              BadRequest(Json.obj("error" -> true,
-                "message" -> "\"name\" was not content =(")).as("application/json")
-            }
-          case _ =>
-            BadRequest(Json.obj("error" -> true,
-              "message" -> "Could not find JSON elem \"name\" =(")).as("application/json")
+    name match {
+      case Some(n) =>
+        Bucket.saveName(n.head, bucketId)
+        val test = bucketId
+        val bucket = Bucket.byId(bucketId);
+        val session = ThinkingSession.byId(bucket.get.sessionId).get
+
+        user match {
+          case Some(u) =>
+            val eventId = Event.create("renameBucket", session, session.currentHat, user, None, bucket, new Date())
+            val event = Event.byId(eventId)
+            val topicName = controllers.WebSocket.getTopicName(session.id);
+            WebSocket.publishEvent(event.get, session.id)
+            Ok
+          case None => BadRequest
         }
-      case _ =>
-        BadRequest(Json.obj("error" -> true,
-          "message" -> "Request body not a JSON object =p")).as("application/json")
-
+      case None => BadRequest
     }
   }
 
 }
+

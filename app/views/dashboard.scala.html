@@ -1,4 +1,4 @@
-@(sess1:Long, sess2:Long, sess3:Long, noCards: List[(String,Long)], timePerSession:List[HatElapsed], noCardsP: List[(String,Long)],noCardsLP: List[(String,Long)])
+@(hatElapsedTime:List[(String, Long)], usrIDs: List[Long], userWithHats:List[(String, List[Long])])
 @import models._
 
 @main("Dashboard", null) {
@@ -8,7 +8,7 @@
 				<div class="col-lg-12">
 					<h1>Dashboard <small>Statistics Overview</small></h1>
 					<ol class="breadcrumb">
-						<li class="active"><i class="fa fa-dashboard"></i> Dashboard</li>
+						<li class="active"><i class="fa fa-dashboard"></i>Dashboard</li>
 					</ol>
 				</div>
 			</div><!-- /.row -->
@@ -16,10 +16,22 @@
 			<div class="col-lg-12">
 					<div class="panel panel-primary">
 						<div class="panel-heading">
-							<h3 class="panel-title"><i class="fa fa-long-arrow-right"></i> No Of Cards For Last Three Sessions</h3>
+							<h3 class="panel-title"><i class="fa fa-long-arrow-right"></i> Bucket Thing(Not Ready Yet)</h3>
 						</div>
 						<div class="panel-body">
-							<div id="cards-three-session"></div>
+							<div id="cards-user-bucket"> </div>
+						</div>
+					</div>
+				</div>	
+			</div><!-- /.row -->
+			<div class="row">
+			<div class="col-lg-12">
+					<div class="panel panel-primary">
+						<div class="panel-heading">
+							<h3 class="panel-title"><i class="fa fa-long-arrow-right"></i> Card Status for Each User</h3>
+						</div>
+						<div class="panel-body">
+							<div id="cards-user-current-session"> </div>
 						</div>
 					</div>
 				</div>	
@@ -27,40 +39,10 @@
 				<div class="col-lg-6">
 					<div class="panel panel-primary">
 						<div class="panel-heading">
-							<h3 class="panel-title"><i class="fa fa-comments-o"></i> Thinking Message Statistics(Current Session)</h3>
-						</div>
-						<div class="panel-body">
-							<div class="table-responsive">
-								<table class="table table-bordered table-hover table-striped tablesorter">
-									<thead>
-										<tr>
-											<th>Hat<i class="fa fa-sort"></i></th>
-											<th>Per Hat Cards<i class="fa fa-sort"></i></th>
-										</tr>
-									</thead>
-									<tbody>
-										@for( sCard <- noCards) {
-											<tr>
-											<td>@sCard._1</td>
-											<td>@sCard._2</td>
-										</tr>
-										}
-									</tbody>
-								</table>
-							</div>
-						</div>
-					</div>
-				</div>
-				<div class="col-lg-6">
-					<div class="panel panel-primary">
-						<div class="panel-heading">
 							<h3 class="panel-title"><i class="fa fa-long-arrow-right"></i> Elapsed Time Per Hat(Current Session)</h3>
 						</div>
 						<div class="panel-body">
-							<div id="elapsed-time-chart-donut"></div>
-							<div class="text-right">
-								<a href="#">View Details <i class="fa fa-arrow-circle-right"></i></a>
-							</div>
+							<div id="elapsed-time-chart-donut" style="background-color:#F0EDDA;" ></div>
 						</div>
 					</div>
 				</div>
@@ -69,44 +51,111 @@
 	</div><!-- /#wrapper -->
 	<script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/raphael/2.1.0/raphael-min.js"></script>
 	<script type="text/javascript" src="//cdn.jsdelivr.net/morris.js/0.4.1/morris.min.js"></script>
+	<script src="http://code.highcharts.com/highcharts.js"></script>
+	<script src="http://code.highcharts.com/modules/exporting.js"></script>
 	<script>
-		$(function() {
-			Morris.Donut({
-				element : 'elapsed-time-chart-donut',
-				data : [ {
-					label : "@timePerSession.head.hat_id",
-					value : @timePerSession.head.elapsed_time
-				}, {
-					label : "@timePerSession.tail.head.hat_id",
-					value : @timePerSession.tail.head.elapsed_time
-				}, {
-					label : "@timePerSession.tail.tail.head.hat_id",
-					value : @timePerSession.tail.tail.head.elapsed_time
-				}, {
-					label : "@timePerSession.tail.tail.tail.head.hat_id",
-					value : @timePerSession.tail.tail.tail.head.elapsed_time
-				}, {
-					label : "@timePerSession.tail.tail.tail.tail.head.hat_id",
-					value : @timePerSession.tail.tail.tail.tail.head.elapsed_time
-				}, {
-					label : "@timePerSession.tail.tail.tail.tail.tail.head.hat_id",
-					value : @timePerSession.tail.tail.tail.tail.tail.head.elapsed_time
-				} ],
-				formatter : function(x) {
-					return x + " %"
-				}
-			});
-			Morris.Area({
-  element: 'cards-three-session',
-  data: [
-    { y: '@sess1', White: @noCards.head._2, Red: @noCards.tail.head._2, Yellow:@noCards.tail.tail.head._2, Black: @noCards.tail.tail.tail.head._2, Green: @noCards.tail.tail.tail.tail.head._2, Blue: @noCards.tail.tail.tail.tail.tail.head._2 },
-    { y: '@sess2', White: @noCardsP.head._2, Red: @noCardsP.tail.head._2, Yellow:@noCardsP.tail.tail.head._2, Black: @noCardsP.tail.tail.tail.head._2, Green: @noCardsP.tail.tail.tail.tail.head._2, Blue: @noCardsP.tail.tail.tail.tail.tail.head._2 },
-    { y: '@sess3', White: @noCardsLP.head._2, Red: @noCardsLP.tail.head._2, Yellow:@noCardsLP.tail.tail.head._2, Black: @noCardsLP.tail.tail.tail.head._2, Green: @noCardsLP.tail.tail.tail.tail.head._2, Blue: @noCardsLP.tail.tail.tail.tail.tail.head._2 }
-  ],
-  xkey: 'y',
-  ykeys: ['White', 'Red', 'Yellow', 'Black', 'Green', 'Blue'],
-  labels: ['Series A', 'Series B', 'Series C', 'Series D', 'Series E', 'Series F']
-});
+	
+	$(function() {
+	
+
+	    $("table").tablesorter({
+	        debug: true
+	    });
+	
+		var hatArray = [];
+		var hatColor = [];
+		var cardArray = [];
+		var hColor = [] ;
+		var userArray =[];
+		var resultArray =[];
+		@for(hTime <- hatElapsedTime){
+			var obj = {
+	        value: @hTime._2,
+	        label: '@hTime._1',
+	    }
+	    hatArray.push(obj);
+	    hatColor.push("@hTime._1.toLowerCase")
+		}
+		Morris.Donut({
+			element: 'elapsed-time-chart-donut',
+				data: hatArray,
+				colors: hatColor
+		});	
+	
+		 @for(sUserWithHats <- userWithHats ){
+		 	cardArray.push(@sUserWithHats._2);
+		 	var obj = {
+	        	data: cardArray,
+	        	name: '@sUserWithHats._1',
+	    	}
+	    	cardArray = [];
+	    	resultArray.push(obj);
+		 }
+	    
+	 	@for( uID <- usrIDs ){
+			userArray.push('@uID')
+	 	}
+	 	
+		$('#cards-user-current-session').highcharts({
+				colors: ["#FFFF00", "#4876FF", "#E6E6FA", "#000033", "#FF0066", "#669966"],
+	            chart: {
+	            	 backgroundColor: {
+	         			linearGradient: { x1: 0, y1: 0, x2: 0, y2: 1 },
+	         				stops: [
+	            				[0, 'rgb(96, 96, 96)'],
+	            				[1, 'rgb(230, 230, 250)']
+	         				]
+	     				 },
+	                type: 'column'
+	            },
+	            title: {
+	                text: 'No. of Cards Per User'
+	            },
+	            xAxis: {
+	                categories: userArray
+	            },
+	            yAxis: {
+	                min: 0,
+	                title: {
+	                    text: 'Total Cards'
+	                },
+	                stackLabels: {
+	                    enabled: true,
+	                    style: {
+	                        fontWeight: 'bold',
+	                        color: (Highcharts.theme && Highcharts.theme.textColor) || 'gray'
+	                    }
+	                }
+	            },
+	            legend: {
+	                align: 'right',
+	                x: -70,
+	                verticalAlign: 'top',
+	                y: 40,
+	                floating: true,
+	                backgroundColor: (Highcharts.theme && Highcharts.theme.legendBackgroundColorSolid) || 'white',
+	                borderColor: '#CCC',
+	                borderWidth: 1,
+	                shadow: false
+	            },
+	            tooltip: {
+	                formatter: function() {
+	                    return '<b>'+ this.x +'</b><br/>'+
+	                        this.series.name +': '+ this.y +'<br/>'+
+	                        'Total: '+ this.point.stackTotal;
+	                }
+	            },
+	            plotOptions: {
+	                column: {
+	                    stacking: 'normal',
+	                    dataLabels: {
+	                        enabled: true,
+	                        color: (Highcharts.theme && Highcharts.theme.dataLabelsColor) || 'white'
+	                    }
+	                }
+	            },
+	            series: resultArray
+	        });
 		});
 	</script>
 }

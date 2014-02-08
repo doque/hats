@@ -6,41 +6,56 @@
 
 
 @main(null, null) {
-	<div id="content" class="well container">
-		<div class="row">
-			<div class="col-md-6 col-md-offset-3">				 	
-				<div class="row well">
-				 	<p class="lead">
-						<img src="assets/img/hats_small.png" class="pull-right" width="200"/>
-					 	<strong>Six Thinking Hats</strong>, a <em>parallel thinking process,</em> 
-		    			helps people in groups to be more productive, focused, and mindfully involved.
-		    		</p>
-	    		</div>
-	    		<div class="row" style="margin-top: 20px;">
-	    			@helper.form(action = routes.ThinkingSessions.createSession,
-			  			'id -> "session-form", 'role->"form", 'class -> "") {
-						<div class="form-group">
-							<label for="topic">First, think of a good title:</label>
-							<input id="topic" class="form-control" type="text" required name="topic" placeholder="Try and be specific!"/>
-						</div>
-						
-						<div class="form-group">
-							<label for="mailAddresses">Now let's invite some friends!</label>
-							<div class="input-group">
-								<input id="mailAddresses" class="tokenfield input-xlarge" type="text" name="mailAddresses" placeholder="john@@company.co"/>
-								<span class="input-group-addon">separate with ,</span>
+	<div class="row">
+		<div id="content" class="well container">
+			<div class="row">
+				<div class="col-md-6 col-md-offset-3">				 	
+					<div class="row well" style="background: #FDFDFD">
+					 	<p class="lead">
+							<img src="assets/img/hats_small.png" class="pull-right" width="200"/>
+						 	<strong>Six Thinking Hats</strong>, a <em>parallel thinking process,</em> 
+			    			helps people in groups to be more productive, focused, and mindfully involved.
+			    		</p>
+		    		</div>
+		    		<div class="row" style="margin-top: 20px;">
+		    			@helper.form(action = routes.ThinkingSessions.createSession,
+				  			'id -> "session-form", 'role->"form", 'class -> "") {
+				  			
+							<div class="form-group">
+								<label for="topic">First, think of a good title:</label>
+								<input id="topic" class="form-control" type="text" required name="topic" placeholder="Try and be specific!"/>
 							</div>
-						</div>
-						
-						<div class="form-group col-md-6 col-md-offset-3 center">
-							<button type="submit" class="btn btn-success btn-lg btn-block">
-								<span class="glyphicon glyphicon-plus"></span>
-								Get Started	
-							</button>
-						</div>
-					}
-	    		</div>
+							
+							@if(user.mail == None) {
+		  						<div class="form-group">
+									<label for="adminMailAddress">It seems this is the first time you're here, what is your e-mail address?</label>
+									<input id="adminMailAddress" class="tokenfield form-control" type="text" required name="adminMailAddress" placeholder="your@@email.com"/>
+								</div>
+							}
+							
+							<div class="form-group">
+								<label for="mailAddresses">Now let's invite some of your friends!</label>
+								<div class="input-group">
+									<input id="mailAddresses" class="tokenfield form-control" type="text" name="mailAddresses" placeholder="john@@company.com"/>
+									<span class="input-group-addon">separate with ,</span>
+								</div>
+							</div>
+							
+							<div class="form-group col-md-6 col-md-offset-3 center">
+								<button type="submit" class="btn btn-success btn-lg btn-block">
+									<span class="glyphicon glyphicon-plus"></span>
+									Get Started	
+								</button>
+							</div>
+						}
+		    		</div>
+				</div>
 			</div>
 		</div>
 	</div>
+	<script>
+		$(function() {
+			$('.tokenfield').tokenfield();
+		});
+	</script>
 }

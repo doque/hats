@@ -1,68 +1,25 @@
-var clicked = false;
-var sec = 0;
-var elapsedTime = 0;
-function startClock() {
-	if (clicked === false) {
-		clock = setInterval(stopWatch(), 1000);
-		clicked = true;
-	} else if (clicked === true) {
-	}
-}
-function stopWatch() {
-	sec++;
-}
-function stopClock() {
-	window.clearInterval(clock);
-	sec = 0;
-	clicked = false;
-	startClock();
-}
-
-
-// Scrolls the view down to the config pane on the frontpage
-$.fn.scrollView = function() {
-	return this.each(function() {
-		$('html, body').animate({
-			scrollTop : $(this).offset().top - 10
-		}, 1000);
-	});
-};
-
 $(function() {
-
-	filepicker.setKey("ALJ5oSFlR428EQekrItRgz");
-	$('#addFile').click(function() {
-		filepicker.pick({
-			mimetypes : [ 'image/*', 'text/plain' ],
-			services : [ 'COMPUTER', 'FACEBOOK', 'GMAIL' ],
-		}, function(inkBlob) {
-			var imgUrl = inkBlob.url, imgMine = inkBlob.mime;
-			// inject into hidden fields
-			$('#imgUrl').val(imgUrl);
-			$('#imgMime').val(imgMime);
-		});
-	});
-
-	$("table").tablesorter({
-		debug : true
-	});
 
 	$('#modal-button').click(function() {
 		/* new user? */
-		var isNewUser = ($('#form-user').val() === "New User");
-
-		console.log("is new user? " + isNewUser);
-
+		var isNewUser = (USER_NAME === "New User");
 		/* force new user to enter name */
 		if (isNewUser) {
 			var name = $('#modal-username');
 			if (name.val() === "") {
 				name.parent().addClass('has-error');
 			} else {
-				name.parent().removeClass('has-error');
-				$('#form-user').val(name.val());
-				$('#first-time').remove();
-				$('#hatchange-modal').modal('hide');
+				jsRoutes.controllers.Users.saveName().ajax({
+					data : {
+						"name" : name.val()
+					},
+					success : function() {
+						USER_NAME = name.val();
+						name.parent().removeClass('has-error');
+						$('#first-time').remove();
+						$('#hatchange-modal').modal('hide');
+					}
+				});
 			}
 		} else {
 			$('#hatchange-modal').modal('hide');
@@ -77,9 +34,6 @@ $(function() {
 
 	window.progressBar = new ProgressBar('#progressBar');
 
-	// initialize tooltips
-	$('.tooltipster').tooltipster();
-
 	// setup initial card setup
 	if (typeof CARDS !== "undefined" && CARDS.length > 0) {
 		$(CARDS).each(function() {
@@ -87,63 +41,50 @@ $(function() {
 		});
 	}
 
-	/*$('#card-form').ajaxForm({
-	        dataType : "json",
-	        type : "post",
-	        //beforeSubmit: showRequest,
-	        success : function(card) {
-	                return;
-	                // if (card.error === true) {
-	                //         alert(card.message);
-	                //         return;
-	                // }
-	                // addCard(card); // post-submit callback
-	                
-	        }
-	});*/
-
-	$('.tooltipster').tooltipster();
-
 	$('.tokenfield').tokenfield();
 
-	// get dashboard for session id
-	$('#indicate-finish').click(
-			function() {
-				window.location.href = '/' + SESSION_ID + '/dashboard';
-				$('body').removeClass().addClass("dashboard");
-				elapsedTime = sec;
-				stopClock();//Stop clock
-				jsRoutes.controllers.Dashboard.saveDuration(SESSION_ID, HAT,
-						elapsedTime).ajax({
-					dataType : "json",
-					type : "post",
-					success : function(data) {
-						if (data.error === true) {
-							alert(data.message);
-						}
-						return;
-					}
-				});
-			});
+	$(document).on('click', '.addbucket', function() {
+		addBucket();
+	});
+	$(document).on('blur', '.bucketname', function() {
+		renameBucket(this); // this = element
+	});
+	$(document).on('click', 'a.fancybox', function(e) {
+		e.preventDefault();
+		var options = {
+			speed : "slow"
+		}
+		var href = $(this).attr("href");
+		if (!!~href.indexOf("youtube.com/watch?v=")) {
+			$(this).attr("href", href.replace("watch?v=", "v/"));
+			options.type = "swf";
+			//options.swf= {"wmode":'transparent','allowfullscreen':'true'}
+		}
+		console.log(options);
+		$.fancybox.open(this, options);
+	});
+	$('#indicate-finish').click(function() {
+		location.href = "/" + SESSION_ID + "/dashboard";
+	});
 
 });
 // get websocket up and running
+
 function instantiateSocket() {
 	// connect to WAMPlay server
-	console.log("Connecting to WAMPlay server...");
-	startClock();
+	//console.log("Connecting to WAMPlay server...");
 	// successful setup
 	ab.connect(WSURI, function(session) {
-
 		// click handler for add card
 		$("#btnAddCard").click(function() {
 			var newCard = {
 				"thinkingSession" : SESSION_ID,
-				"hat" : $("#form-hat").val(),
+				"hat" : HAT,
 				"content" : $("#content").val(),
-				"username" : $("#form-user").val(),
+				"username" : USER_NAME,
 				"userId" : USER_ID
 			};
+			CARDS.push(newCard);
 			var addCardEvent = {
 				"eventType" : "addCard",
 				"eventData" : newCard
@@ -152,54 +93,30 @@ function instantiateSocket() {
 			session.call(CALL_URI + "#addCard", message)
 		});
 
-		$('#indicate-ready').click(
-				function() {
-					var hatInfo = {
-						"thinkingSession" : SESSION_ID,
-						"hat" : $("#form-hat").val()
-					};
-					var moveHatEvent = {
-						"eventType" : "moveHat",
-						"eventData" : hatInfo
-					}
-					var message = JSON.stringify(moveHatEvent);
-					session.call(CALL_URI + "#moveHat", message)
-					// jsRoutes.controllers.ThinkingSessions.restChangeHat(SESSION_ID).ajax({
-					//         dataType : "json",
-					//         type : "post",
-					//         success : function(data) {
-					//                 if (data.error === true) {
-					//                         alert(data.message);
-					//                         return;
-					//                 }
-					//                 $('circle.' + data.hat).show();
-					//                 moveTo(data.hat);
-					//         }
-					// });
-					elapsedTime = sec;
-					stopClock();//Stop clock
-					jsRoutes.controllers.Dashboard.saveDuration(SESSION_ID,
-							HAT, elapsedTime).ajax({
-						dataType : "json",
-						type : "post",
-						success : function(data) {
-							if (data.error === true) {
-								alert(data.message);
-							}
-							return;
-						}
-					});
-				});
-		console.log("Connected to " + WSURI);
+		$('#indicate-ready').click(function() {
+			var hatInfo = {
+				"thinkingSession" : SESSION_ID,
+				"hat" : HAT
+			};
+			var moveHatEvent = {
+				"eventType" : "moveHat",
+				"eventData" : hatInfo
+			};
+			var message = JSON.stringify(moveHatEvent);
+			session.call(CALL_URI + "#moveHat", message);
+		});
+		// console.log("Connected to " + WSURI);
 		// subscribe to add cards here, give a callback
 		// ID needs to be string
 		session.subscribe(SESSION_ID.toString(), onEvent);
-		console.log("Subscribed to session number " + SESSION_ID);
+		//console.log("Subscribed to session number " + SESSION_ID);
 	},
 
 	// WAMP session is gone
 	function(code, reason) {
-		console.log("Connection lost (" + reason + ")", true);
+		if (confirm('an error occured, reload?'))
+			location.reload();
+		//console.log("Connection lost (" + reason + ")", true);
 		// should probably reconnect here
 	},
 	// additional options
@@ -210,13 +127,14 @@ function instantiateSocket() {
 }
 
 // debugging handler for websocket events coming in
+
 function onEvent(topic, event) {
 
 	// add switch case for topic here:
 
-	console.log("Message from topic: " + topic + ":");
+	//console.log("Message from topic: " + topic + ":");
 	// event holds the actual message that is being sent
-	console.log(event);
+	//console.log(event);
 	// event.username = "FooUser";
 	// event.id = 1e4;
 	//if (userid != incoming user) OR use skip paramters in session.send
@@ -226,15 +144,6 @@ function onEvent(topic, event) {
 		moveTo(event.eventData.hat);
 	}
 	window.progressBar.add(event.eventData);
-
-}
-
-function makeDraggable() {
-	$('#cards-list div.card').draggable({
-		containment : "#cards-list",
-		cursor : "move",
-		stack : '.draggable'
-	});
 }
 
 function moveTo(hat) {
@@ -252,15 +161,67 @@ function moveTo(hat) {
 
 	// overwrite global HAT var
 	HAT = hat.toLowerCase();
+	console.log("changed to %s hat", HAT);
+	location.hash = HAT;
 
-	if (HAT !== "blue") {
-		$('#cards-list div.card').draggable('disable');
-	} else {
-		$('#cards-list div.card').draggable('enable');
-		$('#indicate-finish').show();
-		$('#indicate-ready').hide();
+	if (HAT === "blue") {
+		prepareBlueHat();
 	}
 
+}
+
+// bucket should be {id, name}
+
+function addBucket() {
+	// get bucket info from server
+	jsRoutes.controllers.Cards.createBucket(SESSION_ID).ajax(
+			{
+				success : function(bucket) {
+					console.log("adding a bucket", bucket);
+					//console.log("todo: remove dummy bucket in addBucket()");
+					var template = Handlebars.compile($('#bucket-template')
+							.html());
+					var compiled = template(bucket).toString(); // workaround   
+					// workaround
+					$('#buckets-list').append(compiled).find('div.bucket')
+							.droppable(options.droppable); //.sortable(sortOptions);
+				}
+			});
+
+}
+
+function renameBucket(elem) {
+	// post bucketname to server
+	var name = $(elem).val();
+	// ajax to bucket name change
+
+	var bucketId = $(elem).data("bucketid");
+	jsRoutes.controllers.Cards.renameBucket(bucketId).ajax({
+		data : {
+			"name" : name
+		},
+		// have to use complete since no data is returned
+		complete : function(e) {
+			console.log("renamed bucket");
+			$(elem).parent().find("h4").removeClass("hide").text(name);
+			$(elem).remove();
+		}
+	});
+}
+
+function prepareBlueHat() {
+
+	console.log("preparing blue hat, administrative controls enabled");
+
+	enableDragDrop();
+
+	// toggle buttons
+	$('#indicate-finish').removeClass('hide');
+	$('#indicate-ready').addClass('hide');
+
+	// enable buckets here
+	$('#buckets').removeClass("hide");
+	addBucket();
 }
 
 function addCard(card, effect) {
@@ -269,6 +230,10 @@ function addCard(card, effect) {
 	 * card json: {"id":5, "hat": "Green", "content": "card content",
 	 * "username":"username"}
 	 */
+	// create clickable links
+	if (card.content.trim() === "")
+		return;
+	card.content = linkify(card.content);
 
 	var template = Handlebars.compile($('#card-template').html());
 	var compiled = template(card);
@@ -278,10 +243,63 @@ function addCard(card, effect) {
 	//if (effect) markup.effect('highlight', {}, 1000);
 
 	// reset card content field
-	$('#content, imgUrl, imgMime').val("");
+	$('#content').val("");
 	$('#nocardsyet').remove();
 
 	window.progressBar.add(card);
-	makeDraggable();
+	if (HAT === "blue") {
+		enableDragDrop();
+	}
 
+}
+
+function enableDragDrop() {
+	$('#cards-list div.card').draggable(options.draggable);
+}
+
+// jquery ui options
+
+var options = {
+	// drag options for cards
+	draggable : {
+		containment : "#hat-cards",
+		cursor : "move",
+		stack : "div.card",
+		// snap: true,
+		revert : "invalid" // revert, if not dropped to droppable
+	},
+
+	droppable : {
+		hoverClass : "dropit",
+		drop : function(event, ui) {
+			// grab bucket id
+			var bucketId = $(event.target).data('bucketid');
+			// kill placeholder
+			$(this).find(".placeholder").remove();
+			// bind card
+			var card = ui.draggable, cardId = card.data('cardid');
+			
+			//console.log(bucketId, cardId);
+			
+			// css fix
+			card.css("position", "").off(); // unbind all drag shit
+			card.draggable("disable"); // disable further dragging
+			// inject into container
+			$(this).find(".cards").append(card);
+			// finally, post
+			jsRoutes.controllers.Cards.addCardToBucket(bucketId, cardId).ajax({
+				method : "post"
+			});
+		}
+	},
+	fancybox : {
+		speed : "slow"
+	// override youtube,
+	}
+};
+
+function linkify(text) {
+	// only use direct jp(e)g/png links or youtube links
+	var exp = /(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig;
+	return text.replace(exp, "<a class='fancybox' href='$1'>$1</a>");
 }

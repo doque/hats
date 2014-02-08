@@ -6,14 +6,13 @@ import play.api.test.Helpers._
 import models._
 import controllers._
 import java.util.Date
-
 @RunWith(classOf[JUnitRunner])
 class UnitSpec extends Specification {
 
   "Models and Persistence Layer" should {
     "create and retrieve card" in new WithApplication {
       val content = "PersistenceSpecContent"
-      val id = Card.create(content, ThinkingSession.dummyId, Hat.dummyId, User.dummyId, 0, 0, None, None)
+      val id = Card.create(content, ThinkingSession.dummyId, Hat.dummyId, User.dummyId)
       val dbCard = Card.byId(id)
       dbCard must beSome
       dbCard.get.id must equalTo(id)
@@ -21,8 +20,6 @@ class UnitSpec extends Specification {
       dbCard.get.thinkingSession.id must equalTo(ThinkingSession.dummyId)
       dbCard.get.hat.id must equalTo(Hat.dummyId)
       dbCard.get.creator.id must equalTo(User.dummyId)
-      dbCard.get.imgUrl must equalTo(None)
-      dbCard.get.imgMime must equalTo(None)
     }
 
     "create and retrive ThinkingSession" in new WithApplication {
@@ -50,7 +47,7 @@ class UnitSpec extends Specification {
       val name = "PersistenceSpecType"
       val date = new Date();
       val eventId = Event.create(name, ThinkingSession.dummyId, Hat.dummyId,
-        None, None, date);
+        None, None, None, date);
       val event = Event.byId(eventId)
       event must beSome
       event.get.eventType must beEqualTo(name)
@@ -80,8 +77,8 @@ class UnitSpec extends Specification {
   "Sending Mails" should {
     "test send mail" in new WithApplication {
       // add some emails to the list for testing
-      val emails: List[String] = Nil
-      ThinkingSessions.sendInviteMails(emails, "Unit Test", routes.ThinkingSessions.index(ThinkingSession.dummyId).absoluteURL(false)(FakeRequest()))
+      val emails: List[(String, Long)] = Nil
+      ThinkingSessions.sendInviteMails(emails, "Unit Test", ThinkingSession.dummyId)(FakeRequest())
     }
   }
 }

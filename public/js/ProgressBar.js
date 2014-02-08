@@ -10,18 +10,25 @@
  * @bubbles (optional) - initial bubbles to be set up with custom counts
  */
 function ProgressBar(container, bubbles) {
-	this.iterations = {};
-	this.factor = 3;
 	this.container = container;
 	this.bubbles = bubbles || {
-		// todo: use maps in the future to hold actual bubbles
-		"blue": 0,
-		"white": 0,
-		"red": 0,
-		"yellow": 0,
-		"green": 0,
-		"black": 0
+		"blue": 5,
+		"white": 5,
+		"red": 5,
+		"yellow": 5,
+		"green": 5,
+		"black": 5
 	};
+	this.hats = [ 
+		"white",
+		"red",
+		"yellow",
+		"black",
+		"green",
+		"blue"
+	];
+	this.render();
+	this.addTooltips(false);
 }
 /**
  * adds a card to the progress bar inside the corresponding hat
@@ -29,9 +36,11 @@ function ProgressBar(container, bubbles) {
  * @param card - a Card object that should be added to the progress bar
  */
 ProgressBar.prototype.add = function(card) {
-	//console.log("adding card: ", card);
+	//console.log("adding card: ", card);	
+	this.addTooltips(this.hats, true);
 	this.bubbles[card.hat]++;
 	this.render();
+	this.setBubbleSizes(this.bubbles);
 };
 
 /**
@@ -40,6 +49,15 @@ ProgressBar.prototype.add = function(card) {
  */
 ProgressBar.prototype.render = function() {
 	var self = this;
+	var hats = self.hats;
+
+	for(var i = 0; i < hats.indexOf(HAT) + 1; i++) {
+			var cirque = $(self.container).find('circle.' + hats[i]);
+			var position = 84 - hats.indexOf(HAT) * 14 + i * 14;
+			var percentage = position + "%";
+			cirque.attr("cx", percentage);
+	}
+
 	/**
      * Calculate bubble size using logistic distribution, see https://de.wikipedia.org/wiki/Logistische_Verteilung
      * to play with the parameters see plots at
@@ -55,19 +73,57 @@ ProgressBar.prototype.render = function() {
         var stretch = 2;
         var fullSize = 20; // initial size is about 5
         // initial size for 0 cards
-        return (3 + (fullSize - 3) / (1 + Math.exp((-count / stretch) + 2)));
+        return Math.ceil((3 + (fullSize - 3) / (1 + Math.exp((-count / stretch) + 2))));
     }
-	for (var hat in self.bubbles) {
-		var count = self.bubbles[hat];
-		//console.log("hat: %s", hat);
-		//console.log("count: %d", count);
-		if (count > 0) {
-			var circle = $(self.container).find('circle.' + hat);
-			//console.log("current size %d", circle.attr("r"));
-			//console.log(Math.ceil(getSize(count)));
-			var count = Math.ceil(getSize(count));
-			console.log("sizing %s hat to %dpx", hat, count);
-			circle.attr("r", count);
+
+	/*for (var hat in self.bubbles) {
+		var count = self.bubbles[hat];		
+
+		if (count > 0) {			
+			var count = getSize(count);
+			self.bubbles[hat] = count;
+		}		
+	}*/	
+
+};
+
+ProgressBar.prototype.setBubbleSizes = function(bubbles) {
+	/** Where David's magic happens
+	
+	**/
+	for(var hat in bubbles) {
+		var cirque = $(this.container).find('circle.' + hat);
+		cirque.attr("r", bubbles[hat]);
+	}
+}
+
+ProgressBar.prototype.addTooltips = function(update) {
+	var hats = this.hats;
+	for (var hat in hats) {
+		var addedCards = 0;
+		var users = [];
+		CARDS.forEach(function(card) {
+			if(card.hat === hats[hat]) {
+				addedCards++;
+				if(users.indexOf(card.username) === -1) {
+					users.push(card.username);
+				}
+			}
+		});
+		var contributors = "<li>" + users.join(",") + "</li>";
+		if(!update) {
+			$(this.container).find('circle.' + hats[hat]).qtip({
+			    content: {
+			        text: 'Number of cards in ' + hats[hat] + ' hat: ' + addedCards + '<br/> Contributors: ' + contributors
+			    }, 
+			    style: {
+			    	classes: 'qtip-bootstrap'
+			    }
+			});
+		} else {
+			var qapi = $(this.container).find('circle.' + hats[hat]).data('qtip');
+			var newContent = 'Number of cards in ' + hats[hat] + ' hat: ' + addedCards + '<br/> Contributors: ' + contributors;
+			qapi.set('content.text', newContent);
 		}
 	}
-};
+}

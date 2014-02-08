@@ -12,7 +12,7 @@ import anorm.SqlParser._
  * For timeLimit and aloneTime negative values (-1 will be default) indicates no limitation (e.g. no alone time)
  * @author Nemo
  */
-case class HatFlow(index: Long, thinkingSession: Long, hat: Long, timeLimit: Int, aloneTime: Int)
+case class HatFlow(index: Long, thinkingSession: Long, hat: Long)
 
 object HatFlow {
 
@@ -22,10 +22,8 @@ object HatFlow {
   val DBParser = {
     get[Long]("index") ~
       get[Long]("thinking_session") ~
-      get[Long]("hat") ~
-      get[Int]("time_limit") ~
-      get[Int]("alone_time") map {
-        case index ~ sessionId ~ hatId ~ timeLimit ~ aloneTime => HatFlow(index, sessionId, hatId, timeLimit, aloneTime);
+      get[Long]("hat") map {
+        case index ~ sessionId ~ hatId => HatFlow(index, sessionId, hatId);
       }
   }
 

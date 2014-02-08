@@ -1,7 +1,8 @@
 package controllers
 
 import models._
-import controllers.ThinkingSessions.sessionConfigForm
+import controllers.ThinkingSessions._
+
 import play.api._
 import play.api.mvc._
 import play.core.Router.JavascriptReverseRoute
@@ -21,11 +22,7 @@ object Application extends Controller {
     val user: User = (request.cookies.get(User.idCookie) match {
       case Some(cookie) => User.byCookie(cookie);
       case None => User.byId(User.create("New User", None));
-    }) match {
-      case Some(u) => u
-      case None => User.dummy
-    }
-
+    }).get
     Ok(views.html.index("Six Thinking Hats", user, sessionConfigForm)).withCookies(Cookie(User.idCookie, user.id.toString))
   }
 
@@ -35,8 +32,11 @@ object Application extends Controller {
 
     Ok(
       Routes.javascriptRouter("jsRoutes")(
-        routes.javascript.ThinkingSessions.restChangeHat,
-        routes.javascript.Dashboard.saveDuration)).as("text/javascript")
+        routes.javascript.ThinkingSessions.createSession,
+        routes.javascript.Cards.createBucket,
+        routes.javascript.Cards.renameBucket,
+        routes.javascript.Cards.addCardToBucket,
+        routes.javascript.Users.saveName)).as("text/javascript")
   }
 
 }

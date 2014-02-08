@@ -4,10 +4,10 @@ import play.api.db.DB
 import play.api.db._
 import play.api.Logger
 import play.api.mvc.Cookie
-
 import play.api.Play.current
 import anorm._
 import anorm.SqlParser._
+import scala.util.Random
 
 /**
  * Models participants and moderators/creators of ThinkingSession. No authentication done by us, so
@@ -30,7 +30,7 @@ object User {
   def simple = {
     get[Long]("id") ~
       get[String]("name") ~
-      (get[String]("mail")?) map {
+      (get[String]("mail") ?) map {
         case id ~ name ~ mail => User(id, name, mail)
       }
   }
@@ -50,11 +50,7 @@ object User {
   def byId(id: Long): Option[User] = {
     DB.withConnection { implicit connection =>
       SQL("select * from user where id = {id}").on(
-        'id -> id
-      ).as(User.simple *) match {
-          case x :: _ => Some(x)
-          case Nil    => None
-        }
+        'id -> id).as(User.simple *) headOption
     }
   }
 
@@ -63,13 +59,12 @@ object User {
    * This will NOT return the created User!
    */
   def create(name: String, mail: Option[String]): Long = {
-    val id: Int = (name + System.currentTimeMillis).hashCode
+    val id: Long = (name + System.currentTimeMillis).hashCode + Random.nextLong
     DB.withConnection { implicit connection =>
       SQL("insert into user (id,name,mail) values ({id},{name},{mail})").on(
         'id -> id,
         'name -> name,
-        'mail -> mail
-      ).executeUpdate()
+        'mail -> mail).executeUpdate()
     }
     id
   }
@@ -80,13 +75,44 @@ object User {
   def delete(user: User) = {
     DB.withConnection { implicit connection =>
       SQL("delete from user where id = {id}").on(
-        'id -> user.id
-      ).executeUpdate()
+        'id -> user.id).executeUpdate()
     }
   }
 
-  def byCookie(cookie: Cookie): Option[User] = {
-    byId(java.lang.Long.parseLong(cookie.value))
+  def byCookie(cookie: Cookie): Option[User] = byId(java.lang.Long.parseLong(cookie.value))
+
+  def byMail(mail: String): Option[User] = {
+    DB.withConnection { implicit connection =>
+      SQL("select * from user where mail = {mail}").on(
+        'mail -> mail).as(User.simple *) headOption
+    }
+  }
+
+  def saveMail(user: User, mail: String): Int = saveMail(user.id, mail)
+  def saveMail(userId: Long, mail: String): Int = {
+    DB.withConnection { implicit connection =>
+      SQL("""
+          update user
+          set mail = {mail}
+          where id = {userId}
+          """).on(
+        'mail -> mail,
+        'userId -> userId).executeUpdate()
+    }
+  }
+
+  def saveName(user: User, name: String): Int = saveName(user.id, name)
+
+  def saveName(userId: Long, name: String): Int = {
+    DB.withConnection { implicit connection =>
+      SQL("""
+          update user
+          set name = {name}
+          where id = {userId}
+          """).on(
+        'name -> name,
+        'userId -> userId).executeUpdate()
+    }
   }
 
   /**

@@ -11,6 +11,8 @@ import scala.collection.immutable.HashMap
 import scala.collection.JavaConversions
 import play.api.Play.current
 import play.api.db.DB
+import scala.util.Random
+import play.api.libs.json.JsValue
 
 case class Event(
   id: Long,
@@ -19,9 +21,10 @@ case class Event(
   hat: Hat,
   user: Option[User],
   card: Option[Card],
+  bucket: Option[Bucket],
   time: Date) {
 
-  def toJson(): JsonNode = {
+  def asJson(): JsonNode = {
     if (eventType == null) {
       throw new IllegalArgumentException();
     }
@@ -33,28 +36,51 @@ case class Event(
   }
 
   def getEventData: java.util.Map[String, String] = {
+
     val baseData = HashMap[String, String](
       "thinkinSession" -> thinkingSession.id.toString,
-      "hat" -> hat.name,
+      "hat" -> hat.name.toLowerCase,
       "time" -> time.getTime().toString(),
-      "user" -> user.collect({ case u: User => u.name }).toString(),
-      "card" -> card.collect({ case c: Card => c.id }).toString())
+      "username" -> userName,
+      "cardid" -> cardId,
+      "bucket" -> bucketId,
+      "content" -> cardContent)
     JavaConversions.mapAsJavaMap(baseData)
+  }
+
+  def cardId: String = card match {
+    case Some(c) => c.id.toString
+    case None => "null"
+  }
+
+  def bucketId: String = bucket match {
+    case Some(b) => b.id.toString
+    case None => "null"
+  }
+
+  def cardContent = card match {
+    case Some(c) => c.content
+    case None => "null"
+  }
+
+  def userName = user match {
+    case Some(u) => u.name
+    case None => "null"
   }
 
   val hasCard: Boolean = card match {
     case Some(_) => true
-    case None    => false
+    case None => false
   }
 
   val hasUser: Boolean = user match {
     case Some(_) => true
-    case None    => false
+    case None => false
   }
 }
 
 object Event {
-  val dummy = Event(0, "dummyEvent", ThinkingSession.dummy, Hat.dummy, None, None, new Date())
+  val dummy = Event(0, "dummyEvent", ThinkingSession.dummy, Hat.dummy, None, None, None, new Date())
 
   val DBParser = {
     get[Long]("id") ~
@@ -63,21 +89,24 @@ object Event {
       get[Long]("hat") ~
       (get[Long]("user") ?) ~
       (get[Long]("card") ?) ~
+      (get[Long]("bucket") ?) ~
       get[Date]("time") map {
-        case id ~ eventType ~ thinkingSessionId ~ hatId ~ userId ~ cardId ~ time =>
+        case id ~ eventType ~ thinkingSessionId ~ hatId ~ userId ~ cardId ~ bucketId ~ time =>
           Event(id, eventType,
             ThinkingSession.byId(thinkingSessionId).get, Hat.byId(hatId).get,
             userId match { case Some(u) => User.byId(u) case None => None },
-            cardId match { case Some(c) => Card.byId(c) case None => None }, time);
+            cardId match { case Some(c) => Card.byId(c) case None => None },
+            bucketId match { case Some(b) => Bucket.byId(b) case None => None },
+            time);
       }
   }
 
-  def create(eventType: String, thinkingSessionId: Long, hatId: Long, userId: Option[Long], cardId: Option[Long], time: Date): Long = {
+  def create(eventType: String, thinkingSessionId: Long, hatId: Long, userId: Option[Long], cardId: Option[Long], bucketId: Option[Long], time: Date): Long = {
     DB.withConnection { implicit connection =>
-      val id: Long = (eventType.hashCode() + thinkingSessionId + userId.hashCode() + cardId.hashCode() + time.getTime()).hashCode()
+      val id: Long = (eventType.hashCode() + thinkingSessionId + userId.hashCode() + cardId.hashCode() + time.getTime()).hashCode() + System.currentTimeMillis() + Random.nextLong
       val sql = SQL("""
-          insert into event (id,type,thinking_session,hat,user,card,time) 
-          values ({id},{eventType},{thinkingSessionId},{hatId},{userId},{cardId},{time})
+          insert into event (id,type,thinking_session,hat,user,card,bucket,time) 
+          values ({id},{eventType},{thinkingSessionId},{hatId},{userId},{cardId},{bucket},{time})
           """).on(
         'id -> id,
         'eventType -> eventType,
@@ -85,17 +114,17 @@ object Event {
         'hatId -> hatId,
         'userId -> userId,
         'cardId -> cardId,
-        'time -> time
-      )
+        'bucket -> bucketId,
+        'time -> time)
 
       sql.executeUpdate()
       id
     }
   }
 
-  def create(eventType: String, thinkingSession: ThinkingSession, hat: Hat, user: Option[User], card: Option[Card], time: Date): Long = {
+  def create(eventType: String, thinkingSession: ThinkingSession, hat: Hat, user: Option[User], card: Option[Card], bucket: Option[Bucket], time: Date): Long = {
     create(eventType, thinkingSession.id, hat.id, user.collect({ case u: User => u.id }),
-      card.collect({ case c: Card => c.id }), time)
+      card.collect({ case c: Card => c.id }), bucket.collect({ case b: Bucket => b.id }), time)
   }
 
   def byId(id: Long): Option[Event] = {
