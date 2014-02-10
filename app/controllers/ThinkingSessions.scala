@@ -36,7 +36,7 @@ object ThinkingSessions extends Controller {
     ThinkingSession.byId(id) match {
       case Some(session) => // session exists
         if (ThinkingSession.checkUser(session, user)) { // check if user is part of session
-          Ok(views.html.cards(session, Card.byThinkingSession(id), session.currentHat, user.get))
+          Ok(views.html.cards(session, Card.byThinkingSession(id), session.currentHat, user.get, Event.byThinkingSession(id)))
         } else
           BadRequest
       case None =>

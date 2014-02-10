@@ -1,4 +1,4 @@
-@(session: ThinkingSession, cards: List[Card], hat: Hat, user: User)
+@(session: ThinkingSession, cards: List[Card], hat: Hat, user: User, events: List[Event])
 
 @main(session.title, hat) {
 
@@ -11,6 +11,12 @@
 	<div id="hat" class="@hat.name.toLowerCase">
 
 		<script type="text/javascript">
+			@for(e <- events) {
+  				@if(e.eventType == "createSession") {
+  					var CREATION_TIME = new Date("@e.time");
+  					var userItem = "@e.user";
+  				}
+			}
 			var CARDS = @Html(Card.listToJson(cards).toString);
 			var SESSION_ID = @session.id;
 			var HAT = "@hat.name.toLowerCase";
@@ -148,8 +154,8 @@
 <script type="text/javascript">
 	//set up initial tooltip
 	$(window).load(function() {
+		setSessionData();
 		instantiateSocket();
-		
 		if (USER_NAME !== "New User") {
 			$('#first-time').remove();
 		}

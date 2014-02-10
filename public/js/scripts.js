@@ -126,6 +126,31 @@ function instantiateSocket() {
 	}); // Important! Play rejects all subprotocols for some reason...
 }
 
+function setSessionData() {
+    $('#session-info').html('Session time: ' + timeSince(CREATION_TIME));
+    var date = $.datepicker.formatDate('dd/mm/yy', CREATION_TIME);
+    $('#feed-creation-time').html('Session was created on <strong>' + date + '</strong>');
+}
+
+function timeSince(date) {
+
+    var seconds = Math.floor((new Date() - date) / 1000);
+
+    var interval = Math.floor(seconds / 31536000);
+
+    interval = Math.floor(seconds / 3600);
+    if (interval > 1) {
+        return interval + " hours";
+    }
+
+    interval = Math.floor(seconds / 60);
+    if (interval > 1) {
+        return interval + " minutes";
+    } else {
+    	return "less than a minute"
+    }
+}
+
 // debugging handler for websocket events coming in
 
 function onEvent(topic, event) {
@@ -167,6 +192,8 @@ function moveTo(hat) {
 	if (HAT === "blue") {
 		prepareBlueHat();
 	}
+
+	setSessionData();
 
 }
 

@@ -3,7 +3,10 @@
 	<div class="navbar-header">
 		<a class="navbar-brand" href="#">Six Thinking Hats</a>
 	</div>
-	<div id="navbar-center" style="width: 580px; margin: 0 auto;">
-		<a class="navbar-brand" href="#">@(if (title != null) (title) else "")</a>
+	<div class="navbar-center" style="margin: 0 auto;">
+		<a class="navbar-brand" id="session-topic" href="#">@(if (title != null) (title) else "")</a>
+	</div>
+	<div class="navbar-right">
+		<div class="navbar-brand" id="session-info"></div>
 	</div>
 </nav>

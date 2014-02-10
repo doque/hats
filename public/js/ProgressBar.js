@@ -110,7 +110,13 @@ ProgressBar.prototype.addTooltips = function(update) {
 				}
 			}
 		});
-		var contributors = "<li>" + users.join(",") + "</li>";
+
+		var contributors = "";
+		if(users.length != 0) {
+			var userList = "<li>" + users.join(",") + "</li>";
+			var contributors = '<br/> Contributors: ' + userList;
+		} 
+		
 		if(!update) {
 			$(this.container).find('circle.' + hats[hat]).qtip({
 			    content: {
@@ -122,7 +128,7 @@ ProgressBar.prototype.addTooltips = function(update) {
 			});
 		} else {
 			var qapi = $(this.container).find('circle.' + hats[hat]).data('qtip');
-			var newContent = 'Number of cards in ' + hats[hat] + ' hat: ' + addedCards + '<br/> Contributors: ' + contributors;
+			var newContent = 'No. of cards in ' + hats[hat] + ' hat: ' + addedCards + contributors;
 			qapi.set('content.text', newContent);
 		}
 	}

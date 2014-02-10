@@ -147,3 +147,7 @@ div.card span.name {
 	color: white;
 	opacity: 1;
 }
+
+#session-topic {
+	color: #000000;
+}
