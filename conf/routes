@@ -9,9 +9,6 @@ GET   /:id/dashboard						controllers.Dashboard.showReport(id: Long)
 # JS Routes
 GET    /javascriptRoutes                	controllers.Application.javascriptRoutes
 
-# Send websocket connections to the WAMPlay server
-GET     /wamp                     			ws.wamplay.controllers.WAMPlayServer.connect()
-
 GET    /:id/join/:token						controllers.ThinkingSessions.join(id: Long, token: String)
 
 # Session control
@@ -30,3 +27,6 @@ POST   /user/saveName	                	controllers.Users.saveName
 # Map static resources from the /public folder to the /assets URL path
 GET    /assets/*file                    	controllers.Assets.at(path="/public", file)
 
+
+# Send websocket connections to the WAMPlay server
+GET     /wamp                     			ws.wamplay.controllers.WAMPlayServer.connect()
