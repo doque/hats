@@ -114,6 +114,16 @@ object User {
         'userId -> userId).executeUpdate()
     }
   }
+  def getUserName(usrId: Long): String = {
+    DB.withConnection { implicit connection =>
+      SQL("""select name  from user where id = {usrId}""").on(
+        'usrId -> usrId).as(get[String]("name").single)
+    }
+  }
+
+  def bySession(id: Long): List[User] = {
+    ThinkingSession.userIds(id).map(User.byId(_)).filter(_.isDefined).map(_.get)
+  }
 
   /**
    * some dummy users for dev purposes

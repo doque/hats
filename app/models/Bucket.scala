@@ -10,9 +10,8 @@ import play.api.libs.json._
 case class Bucket(id: Long, sessionId: Long, name: String) {
   def asJson: JsObject = Json.obj(
     "bucketId" -> id,
-    "sessionId" -> sessionId,
+    "thinkingSessionId" -> sessionId,
     "name" -> name)
-
 }
 
 object Bucket {
@@ -23,6 +22,25 @@ object Bucket {
       get[String]("name") map {
         case id ~ sessionId ~ name => Bucket(id, sessionId, name)
       }
+  }
+
+  def listToJson(buckets: List[Bucket]) = {
+    Json.toJson(buckets.map(bucket => bucket.asJson))
+  }
+
+  def byThinkingSession(session: ThinkingSession): List[Bucket] = {
+    byThinkingSessionId(session.id)
+  }
+
+  def byThinkingSessionId(sessionId: Long): List[Bucket] = {
+    DB.withConnection { implicit connection =>
+      SQL("""
+          select * 
+          from bucket 
+          where thinking_session = {sessionId}
+          """).on(
+        'sessionId -> sessionId).as(Bucket.DBParser *)
+    }
   }
 
   def byId(id: Long): Option[Bucket] = {

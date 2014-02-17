@@ -19,14 +19,15 @@ CREATE TABLE thinking_session (
   id                    BIGINT NOT NULL DEFAULT nextval('thinking_session_id_seq') PRIMARY KEY,
   owner                 BIGINT NOT NULL REFERENCES `user`(id),
   title                 varchar(255) NOT NULL,
-  current_hat           integer REFERENCES hat(id)
+  current_hat           integer REFERENCES hat(id),
+  finished              BIT DEFAULT False
 );
 
 
 CREATE TABLE bucket (
   id                  BIGINT NOT NULL PRIMARY KEY,
   thinking_session    BIGINT NOT NULL REFERENCES thinking_session(id),
-  name               text DEFAULT 'Empty Bucket'
+  name               text DEFAULT ''
 );
 
 
@@ -56,7 +57,7 @@ INSERT INTO user VALUES (2,'Manu',NULL);
 INSERT INTO user VALUES (3,'Dom',NULL);
 INSERT INTO user VALUES (4,'Anamika',NULL);
 
-INSERT INTO thinking_session VALUES (0, 1, 'Birthday Present for Manu', 1);
+INSERT INTO thinking_session VALUES (0, 1, 'Birthday Present for Manu', 1, False);
 
 # --- !Downs
 DROP TABLE if exists hat;

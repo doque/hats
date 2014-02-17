@@ -15,30 +15,33 @@ import views.html.defaultpages.notFound
 import scala.collection.JavaConversions
 import java.util.Date
 import ws.wamplay.controllers.WAMPlayServer
+import play.templates.BaseScalaTemplate
+import org.joda.time.DateTime
 
 /**
  * Controls all changes in ThinkingSession state.
  * @author Nemo
  */
-object ThinkingSessions extends Controller {
+object ThinkingSessions extends Controller with UserCookieHandler {
 
   /**
    * Show the index of the current session
    */
   def index(id: Long) = Action { implicit request =>
     Logger.debug("ThinkingSessions.index")
-    val user =
-      request.cookies.get(User.idCookie) match {
-        case Some(cookie) => // found user cookie
-          User.byCookie(cookie)
-        case None => None
-      }
+    val user = cookieUser(request)
     ThinkingSession.byId(id) match {
       case Some(session) => // session exists
         if (ThinkingSession.checkUser(session, user)) { // check if user is part of session
-          Ok(views.html.cards(session, Card.byThinkingSession(id), session.currentHat, user.get, Event.byThinkingSession(id)))
+          if (session isRunning) {
+            val eventList: List[Event] = Event.byThinkingSessionId(id);
+            val bucketList: List[Bucket] = Bucket.byThinkingSessionId(id);
+            val createSessionEvent = eventList.filter((x: Event) => x.eventType == EventType.createSession).headOption
+            Ok(views.html.cards(session, Card.byThinkingSession(id), bucketList, session.currentHat, user.get, createSessionEvent))
+          } else
+            Redirect(routes.Dashboard.showReport(id))
         } else
-          BadRequest
+          Unauthorized
       case None =>
         NotFound
     }
@@ -54,7 +57,6 @@ object ThinkingSessions extends Controller {
         val user = User.byId(userId)
         val eventId = Event.create("userJoin", session, session.currentHat, user, None, None, new Date())
         val event = Event.byId(eventId)
-        WebSocket.publishEvent(event, id)
 
         Redirect(routes.ThinkingSessions.index(id)).withCookies(Cookie(User.idCookie, userId.toString))
       case None =>
@@ -63,27 +65,33 @@ object ThinkingSessions extends Controller {
   }
 
   /**
-   * TODO: Conclude session and redirect to review page
+   * Closes the session and publishes the a corresponding WebSocket event.
+   * Redirects to Dashboard controller
    */
   def closeSession(id: Long) = Action { implicit request =>
+    Logger.info("Session " + id + "closed");
+    val userOption = cookieUser(request)
+    val sessionOption = ThinkingSession.byId(id)
     val user = request.cookies.get(User.idCookie) match {
       case Some(cookie) => User.byCookie(cookie)
       case None         => None
     }
 
     val session = ThinkingSession.byId(id)
+    if (ThinkingSession.checkUser(sessionOption, userOption)) {
+      // persist finished state
+      val session = sessionOption.get;
+      ThinkingSession.finish(session);
 
-    if (ThinkingSession.checkUser(session, user)) {
-
-      val eventId = Event.create("closeSession", session.get, session.get.currentHat, user, None, None, new Date())
+      // publish event about the finished session
+      val eventId = Event.create("closeSession", session, session.currentHat, userOption, None, None, new Date())
       val event = Event.byId(eventId);
       WebSocket.publishEvent(event, id);
 
       Redirect(routes.Dashboard.showReport(id))
     } else {
-      BadRequest
+      Unauthorized
     }
-
   }
 
   /**
@@ -110,29 +118,33 @@ object ThinkingSessions extends Controller {
     Logger.debug("ThinkingSessions.createSession")
     val form = sessionConfigForm.bindFromRequest.get;
 
-    val userOption = request.cookies.get(User.idCookie) match {
-      case Some(cookie) =>
-        User.byCookie(cookie)
-      case None => None
-    }
-
-    userOption match {
-      case Some(user) =>
-        val newSessionId = ThinkingSession.create(user, form.topic, Hat.dummy)
-        if (user.mail == None) {
-          User.saveMail(user, form.adminMail.get)
+    cookieUser(request) match {
+      case Some(creator) =>
+        val newSessionId = ThinkingSession.create(creator, form.topic, Hat.dummy)
+        if (creator.mail == None) {
+          User.saveMail(creator, form.adminMail.get)
         }
-        val mailsAndTokens = addUsersToSessions(form.mailAddressList, newSessionId)
-        sendInviteMails(mailsAndTokens, form.topic, newSessionId)
-        ThinkingSession.addUser(newSessionId, user.id)
-        val session = ThinkingSession.byId(newSessionId)
+        ThinkingSession.byId(newSessionId) match {
+          case Some(session) =>
+            // add creator
+            val token = ThinkingSession.addUser(session, creator)
+            sendCreatorMail(creator, token, form.topic, session)
 
-        Event.create("createSession", session.get, session.get.currentHat, userOption, None, None, new Date())
+            // add all invitees
+            val mailsAndTokens = addUsersToSessions(form.mailAddressList, newSessionId)
+            sendInviteMails(mailsAndTokens, form.topic, newSessionId)
 
-        WAMPlayServer.addTopic(newSessionId.toString)
+            // publish websocket event
+            Event.create("createSession", session, session.currentHat, Some(creator), None, None, new Date())
+            WAMPlayServer.addTopic(newSessionId.toString)
 
-        Logger.debug("Found user cookie, creating session " + newSessionId)
-        Redirect(routes.ThinkingSessions.index(newSessionId))
+            Logger.debug("Creating session " + newSessionId)
+            Redirect(routes.ThinkingSessions.index(newSessionId))
+          case None =>
+            Logger.error("Session creation Failed")
+            InternalServerError
+        }
+
       case None => BadRequest
     }
 
@@ -141,7 +153,6 @@ object ThinkingSessions extends Controller {
   def sendInviteMails(mails: List[(String, Long)], title: String, sessionId: scala.Long)(implicit request: Request[AnyContent]) {
     mails match {
       case (m, t) :: ms =>
-        def toHexString(l: Long): String = if (l < 0l) "-" + (-1 * l).toHexString else l.toHexString
 
         val url = routes.ThinkingSessions.join(sessionId, toHexString(t)).absoluteURL(false)(request)
         val body = new Body(views.txt.email.invite.render(title, url).toString(),
@@ -151,6 +162,21 @@ object ThinkingSessions extends Controller {
         sendInviteMails(ms, title, sessionId)
       case Nil =>
         Logger.info("All Users invited to session " + title)
+    }
+  }
+
+  def toHexString(l: Long): String = if (l < 0l) "-" + (-1 * l).toHexString else l.toHexString
+
+  def sendCreatorMail(creator: User, token: Long, title: String, session: ThinkingSession)(implicit request: Request[AnyContent]) {
+    creator.mail match {
+      case Some(mail) =>
+        val url = routes.ThinkingSessions.join(session.id, toHexString(token)).absoluteURL(false)(request)
+        val body = new Body(views.txt.email.creator.render(title, url).toString(),
+          views.html.email.creator.render(title, url).toString());
+        Mailer.getDefaultMailer().sendMail("Your Thinking Session is now Online!", body, mail);
+        Logger.debug("Invited Creator " + creator.mail + " to thinking session " + title)
+      case None =>
+        Logger.info("Creator could not be invited, no mail address found " + title)
     }
   }
 

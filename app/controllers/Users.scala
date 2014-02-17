@@ -25,9 +25,19 @@ object Users extends Controller {
    * Handles adding cards for a remote procedure call
    */
   def saveName = Action { implicit request =>
+    val thinkingSessionId = request.body.asFormUrlEncoded match {
+      case Some(map) =>
+        map.get("thinkingSessionId") match {
+
+          case Some(sessionIds) => sessionIds head
+          case None => 0
+        }
+      case None => BadRequest
+    }
     val name = request.body.asFormUrlEncoded match {
       case Some(map) =>
         map.get("name") match {
+
           case Some(names) => names head
           case None => "New User"
         }
@@ -39,6 +49,7 @@ object Users extends Controller {
         User.byCookie(cookie) match {
           case Some(user) =>
             User.saveName(user, name);
+            WebSocket.userJoined(user, java.lang.Long.parseLong(thinkingSessionId.toString));
             Ok
           case None => BadRequest
         }

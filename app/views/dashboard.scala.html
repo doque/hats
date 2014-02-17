@@ -1,161 +1,297 @@
-@(hatElapsedTime:List[(String, Long)], usrIDs: List[Long], userWithHats:List[(String, List[Long])])
+@(hatElapsedTime:List[(String, Long)], cards: List[Card], hat: Hat, buckets: List[Bucket], session: ThinkingSession, userJson: String, seriesJson: String, user: User)
 @import models._
+@import play.api.libs.json.JsObject
+@import play.api.libs.json.JsArray
 
-@main("Dashboard", null) {
-	<div id="wrapper">
-		<div id="page-wrapper">
-			<div class="row">
-				<div class="col-lg-12">
-					<h1>Dashboard <small>Statistics Overview</small></h1>
-					<ol class="breadcrumb">
-						<li class="active"><i class="fa fa-dashboard"></i>Dashboard</li>
-					</ol>
-				</div>
-			</div><!-- /.row -->
-			<div class="row">
-			<div class="col-lg-12">
-					<div class="panel panel-primary">
-						<div class="panel-heading">
-							<h3 class="panel-title"><i class="fa fa-long-arrow-right"></i> Bucket Thing(Not Ready Yet)</h3>
-						</div>
-						<div class="panel-body">
-							<div id="cards-user-bucket"> </div>
-						</div>
-					</div>
-				</div>	
-			</div><!-- /.row -->
-			<div class="row">
-			<div class="col-lg-12">
-					<div class="panel panel-primary">
-						<div class="panel-heading">
-							<h3 class="panel-title"><i class="fa fa-long-arrow-right"></i> Card Status for Each User</h3>
-						</div>
-						<div class="panel-body">
-							<div id="cards-user-current-session"> </div>
-						</div>
-					</div>
-				</div>	
-			</div><!-- /.row -->	
-				<div class="col-lg-6">
-					<div class="panel panel-primary">
-						<div class="panel-heading">
-							<h3 class="panel-title"><i class="fa fa-long-arrow-right"></i> Elapsed Time Per Hat(Current Session)</h3>
-						</div>
-						<div class="panel-body">
-							<div id="elapsed-time-chart-donut" style="background-color:#F0EDDA;" ></div>
-						</div>
-					</div>
-				</div>
-			</div><!-- /.row -->				
-		</div><!-- /#page-wrapper -->	
-	</div><!-- /#wrapper -->
-	<script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/raphael/2.1.0/raphael-min.js"></script>
-	<script type="text/javascript" src="//cdn.jsdelivr.net/morris.js/0.4.1/morris.min.js"></script>
-	<script src="http://code.highcharts.com/highcharts.js"></script>
-	<script src="http://code.highcharts.com/modules/exporting.js"></script>
-	<script>
-	
-	$(function() {
-	
+@main((session.title + " | Summary"), null) {
 
-	    $("table").tablesorter({
-	        debug: true
-	    });
+	<div id="dashboard">
+		<div class="row">
+			<div class="col-md-8">
+				<h1 class="pull-left">@session.title - Summary and Statistics</h1>
+			</div>
+			<div class="col-md-4">
+				<div class="pull-right" style="margin-top: 20px;">
+					<button type="button" class="btn btn-success btn-lg" id="printButton">
+						Print
+						<span class="glyphicon glyphicon-print"></span>
+					</button>
+				</div>
+			</div>
+		</div>
+
+		<div class="row">
+			<div class="col-md-12">
+				<h3><span class="glyphicon glyphicon-road"></span> Progress Outline</h3>
+				<div class="well" id="progressBar">
+					@progressbar.render
+				</div>
+			</div>
+		</div>
+
+		<div class="row">
+			<div class="col-md-12">
+				<h3><span class="glyphicon glyphicon-inbox"></span> Cards and Buckets</h3>
+				<div class="row" id="buckets-list">
+					<!-- to be filled by handlebars -->
+				</div>
+				<!-- only used for injecting -->
+				<div id="cards-list"></div>
+			</div>
+
+		</div>
+
+		<div class="row">
+
+			<div class="col-md-6" >
+				<div style="padding-right: 8px;">
+					<h3><span class="glyphicon glyphicon-list-alt"></span> Card Count per User</h3>
+					<div class="well">
+						<div id="barchart" style="height: 400px;"></div>
+					</div>
+				</div>
+			</div>
+			
+
+			<div class="col-md-6">
+				<div style="padding-left: 8px;">
+					<h3><span class="glyphicon glyphicon-time"></span> Time Spent in each Hat</h3>
+					<div class="well">
+						<div id="donutchart" style="height: 400px;"></div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
 	
-		var hatArray = [];
-		var hatColor = [];
-		var cardArray = [];
-		var hColor = [] ;
-		var userArray =[];
-		var resultArray =[];
-		@for(hTime <- hatElapsedTime){
-			var obj = {
-	        value: @hTime._2,
-	        label: '@hTime._1',
-	    }
-	    hatArray.push(obj);
-	    hatColor.push("@hTime._1.toLowerCase")
+	<script type="text/javascript" src="@routes.Assets.at("js/ProgressBar.js")"></script>
+	<script type="text/javascript" src="@routes.Assets.at("js/jquery.PrintArea.js")"></script>
+	<script type="text/javascript" src="@routes.Assets.at("js/scripts.js")"></script>
+
+	@handlebars.render
+
+	<script type="text/javascript">
+
+		var SESSION_ID = @session.id;
+		var CARDS = @Html(Card.listToJson(cards).toString);
+		var BUCKETS = @Html(Bucket.listToJson(buckets).toString);
+		var USER_ID = @user.id;
+		var HAT = "@hat.name.toLowerCase";
+		window.progressBar = new ProgressBar('#progressBar');
+
+
+		// generic colors
+		var colors = {
+			white: "#fff",
+			red: "#c25e3d",
+			yellow: "#F0D850",
+			black: "#051a1a",
+			green: "#5cb847",
+			blue: "#36bcec"
+		};
+
+		// array_values()
+		function colorValues() {
+			return $.map(colors, function(e,name) { return e ;});
 		}
-		Morris.Donut({
-			element: 'elapsed-time-chart-donut',
-				data: hatArray,
-				colors: hatColor
-		});	
-	
-		 @for(sUserWithHats <- userWithHats ){
-		 	cardArray.push(@sUserWithHats._2);
-		 	var obj = {
-	        	data: cardArray,
-	        	name: '@sUserWithHats._1',
-	    	}
-	    	cardArray = [];
-	    	resultArray.push(obj);
-		 }
-	    
-	 	@for( uID <- usrIDs ){
-			userArray.push('@uID')
-	 	}
-	 	
-		$('#cards-user-current-session').highcharts({
-				colors: ["#FFFF00", "#4876FF", "#E6E6FA", "#000033", "#FF0066", "#669966"],
-	            chart: {
-	            	 backgroundColor: {
-	         			linearGradient: { x1: 0, y1: 0, x2: 0, y2: 1 },
-	         				stops: [
-	            				[0, 'rgb(96, 96, 96)'],
-	            				[1, 'rgb(230, 230, 250)']
-	         				]
-	     				 },
-	                type: 'column'
-	            },
-	            title: {
-	                text: 'No. of Cards Per User'
-	            },
-	            xAxis: {
-	                categories: userArray
-	            },
-	            yAxis: {
-	                min: 0,
-	                title: {
-	                    text: 'Total Cards'
-	                },
-	                stackLabels: {
-	                    enabled: true,
-	                    style: {
-	                        fontWeight: 'bold',
-	                        color: (Highcharts.theme && Highcharts.theme.textColor) || 'gray'
-	                    }
-	                }
-	            },
-	            legend: {
-	                align: 'right',
-	                x: -70,
-	                verticalAlign: 'top',
-	                y: 40,
-	                floating: true,
-	                backgroundColor: (Highcharts.theme && Highcharts.theme.legendBackgroundColorSolid) || 'white',
-	                borderColor: '#CCC',
-	                borderWidth: 1,
-	                shadow: false
-	            },
-	            tooltip: {
-	                formatter: function() {
-	                    return '<b>'+ this.x +'</b><br/>'+
-	                        this.series.name +': '+ this.y +'<br/>'+
-	                        'Total: '+ this.point.stackTotal;
-	                }
-	            },
-	            plotOptions: {
-	                column: {
-	                    stacking: 'normal',
-	                    dataLabels: {
-	                        enabled: true,
-	                        color: (Highcharts.theme && Highcharts.theme.dataLabelsColor) || 'white'
-	                    }
-	                }
-	            },
-	            series: resultArray
-	        });
+
+		$(function() {
+
+			//
+			if (typeof BUCKETS !== "undefined" && BUCKETS.length > 0) {
+				$(BUCKETS).each(function() {
+					if (this.name === "") this.name = "Unnamed Bucket";
+					injectBucket(this);
+				});
+				// TODO: don't render empty buckets.
+			}
+			// setup initial card setup
+			if (typeof CARDS !== "undefined" && CARDS.length > 0) {
+				$(CARDS).each(function() {
+					// only add cards that have been put into a bucket
+					if (this.bucketId === null) return;
+					injectCard(linkify(this));
+
+					window.progressBar.add(this);
+					addCardToBucket(this)					
+				});
+			}
+
+			drawDonutChart("donutchart");
+			drawBarChart("#barchart");
+			
+			$('#printButton').click(function() {
+				$('#dashboard').printArea();
+			});
 		});
+
+		function drawDonutChart(elemId) {
+			/*
+			$('#'+elemId).highcharts({
+				colors: [
+					colors["yellow"],
+					colors["blue"],
+					colors["white"],
+					colors["black"],
+					colors["red"],
+					colors["green"]
+				],
+				chart: {
+					backgroundColor: "#f5f5f5" // bootstrap well
+				},
+				title: {
+					text: ''
+				},
+				legend: {
+					enabled: false
+				},
+				tooltip: {
+					enabled: false
+				},
+				exporting: {
+					enabled: false
+				},
+				credits: {
+					enabled: false
+				},
+				plotOptions: {
+					pie: {
+						allowPointSelect: true,
+						cursor: 'pointer',
+						dataLabels: {
+							enabled: true,
+							distance: -50,
+							style: {
+								fontWeight: 'bold',
+								color: 'white',
+								textShadow: '0px 1px 2px black'
+							}
+						},
+						showInLegend: true
+					}
+				},
+				series: [{
+					type: 'pie',
+					name: 'Browser share',
+					data: [
+						@for(hTime <- hatElapsedTime) {
+							["@hTime._1", @hTime._2],
+						}
+					]
+				}]
+			});
+*/
+			var times = [], _colors = [];
+			// Gets time for each hats
+			//sets label and  value for Donut Chart
+			@for(hTime <- hatElapsedTime){
+				var obj = {
+					value: @hTime._2,
+					label: '@hTime._1',
+				}
+				times.push(obj);
+				_colors.push(colors[obj.label.toLowerCase()]);
+			}
+			// Plot the Donut Chart
+			Morris.Donut({
+				element: elemId,
+				data: times,
+				colors: _colors,
+				formatter: function(y) {
+					return formatTime(y);
+				}
+			});
+		}
+
+		var series = @Html(seriesJson);
+		function prepareSeries(s) {
+			$(s).each(function() {
+				this.color = colors[this.colorKey];
+			});
+			return s.reverse();
+		}
+		
+		function drawBarChart(selector) {
+			$(selector).highcharts({
+				chart: {
+					type: 'column',
+					backgroundColor: "#f5f5f5", // bootstrap well
+					colors: colorValues()
+				},
+				title: {
+					text: ""
+				},
+				xAxis: {
+					categories: @Html(userJson)
+				},
+				yAxis: {
+					min: 0,
+					title: {
+						text: ""
+					}
+				},
+				legend: {
+					enabled: false
+				},
+				tooltip: {
+					enabled: false
+				},
+				exporting: {
+					enabled: false
+				},
+				credits: {
+					enabled: false
+				},
+				plotOptions: {
+					column: {
+						stacking: 'normal',
+						dataLabels: {
+							enabled: true,
+							formatter: function () {
+								// only show labels if > 1
+								var color = !!~["Black", "Blue"].indexOf(this.series.name) ? "#fff" : "#000";
+								var text = (this.y > 0 ? this.y : "");
+								return '<span style="color:' + color + '";>' + text + '</span>';
+							}
+						},
+
+					}
+				},
+				series: prepareSeries(series)
+/*
+				[{
+					name: 'White', // not used
+					// first user added 5, second user 3 and so on
+					data: [5, 3, 0, 3],
+					color: colors["white"]
+				}, {
+					name: 'Red',
+					data: [2, 5, 2, 4],
+					color: colors["red"]
+				}, {
+					name: 'Yellow',
+					data: [3, 11, 8, 0],
+					color: colors["yellow"]
+				}, {
+					name: 'Black',
+					data: [3, 2, 5, 4],
+					color: colors["black"]
+				}, {
+					name: 'Green',
+					data: [3, 2, 13, 1],
+					color: colors["green"]
+				}, {
+					name: 'Blue',
+					data: [2, 4, 5, 6],
+					color: colors["blue"]
+				}].reverse() // render white hat first*/
+			});
+		}
+
 	</script>
+
+
+
 }
+
+		

@@ -34,6 +34,12 @@ body.white {
 	padding: 15px 0;
 }
 
+ul {
+	list-style-type: none;
+	padding: 0px;
+	margin: 0px;
+}
+
 #hat-cards {
 	padding-right: 0;
 }
@@ -81,7 +87,7 @@ div.bucket div.cards {
  */
 div.card {
 	display: inline-block;
-	background: #FEFEFE;
+	background-color: #FEFEFE;
 	border-color: #FAFAFA;
 	border-width: 2px;
 	border-style: solid;
@@ -100,6 +106,8 @@ div.card {
 	word-wrap: break-word;       			/* Internet Explorer 5.5+ */
 	word-break: break-all;
 	white-space: normal;
+	width: 180px;
+	vertical-align: top;
 }
 
 div.card a {
@@ -108,7 +116,11 @@ div.card a {
 	font-style: italic;
 }
 
-div.card:hover {
+#dashboard .addbucket {
+	display: none;
+}
+
+div.card:hover, #dashboard div.card {
 	opacity: 1;
 }
 #hat.blue div.card {
@@ -118,30 +130,30 @@ div.card span.name {
 	font-weight: bold;
 	font-style: italic;
 }
-#hat.blue div.card.blue {
+#hat.blue div.card.blue, #dashboard div.card.blue {
 	background-color: #36bcec;
 	border-color: blue;
 	opacity: 1;
 }
-#hat.blue div.card.white, #hat.white div.card.white {
+#hat.blue div.card.white, #hat.white div.card.white, #dashboard div.card.white {
 	background-color: #fff;
 	opacity: 1;
 }
-#hat.blue div.card.yellow, #hat.yellow div.card.yellow {
+#hat.blue div.card.yellow, #hat.yellow div.card.yellow, #dashboard div.card.yellow {
 	background-color: #F0D850;
 	border-color: #dabd16;
 	opacity: 1;
 }
-#hat.blue div.card.green, #hat.green div.card.green {
+#hat.blue div.card.green, #hat.green div.card.green, #dashboard div.card.green {
 	background-color: #5cb847;
 	opacity: 1;
 }
-#hat.blue div.card.black, #hat.black div.card.black {
+#hat.blue div.card.black, #hat.black div.card.black, #dashboard div.card.black {
 	background-color: #051a1a;
 	color: white;
 	opacity: 1;
 }
-#hat.blue div.card.red, #hat.red div.card.red {
+#hat.blue div.card.red, #hat.red div.card.red, #dashboard div.card.red {
 	background-color: #c25e3d;
 	border-color: #994225;
 	color: white;

@@ -1,13 +1,11 @@
 @(title: String, hat: Hat)(content: Html)
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
 	<meta charset="utf-8">
 	<title>@title</title>
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-        
-	<!-- less is compiled client-side -->
+
 	<link href="@routes.Assets.at("css/bootstrap.min.css")" rel="stylesheet">
 	<link href="@routes.Assets.at("css/tooltipster.css")" rel="stylesheet">
 	<link href="@routes.Assets.at("css/tooltipster.css")" rel="stylesheet">
@@ -16,9 +14,8 @@
 	<link href="@routes.Assets.at("css/progress.css")" rel="stylesheet">
 	<link href="@routes.Assets.at("css/jquery-ui-1.10.3.custom.css")" rel="stylesheet">
 	<link href="@routes.Assets.at("css/jquery.fancybox.css")" rel="stylesheet">
-    <!-- Page Specific CSS -->
-     
-        
+	 
+		
 	<!-- all styles specific to our app, with timestamp to force refresh -->
 	<link href="@routes.Assets.at("css/style.css")?@System.currentTimeMillis" rel="stylesheet">        
 	
@@ -35,27 +32,31 @@
 	<script type="text/javascript" src="@routes.Assets.at("js/handlebar.1.1.2.js")"></script>
 	<script type="text/javascript" src="@routes.Assets.at("js/bootstrap.min.js")"></script>
 	<script type="text/javascript" src="@routes.Assets.at("js/jquery.tooltipster.min.js")"></script>
-	<script type="text/javascript" src="@routes.Assets.at("js/jquery.tooltipster.min.js")"></script>
 	<script type="text/javascript" src="@routes.Assets.at("js/jquery.qtip.min.js")"></script>
 	<script type="text/javascript" src="@routes.Assets.at("js/bootstrap-tokenfield.min.js")"></script>
 	<script type="text/javascript" src="@routes.Assets.at("js/autobahn.ws.js")"></script>
 	<script type="text/javascript" src="@routes.Assets.at("js/jquery.fancybox.pack.js")"></script>
-	<script type="text/javascript" src="@routes.Assets.at("js/jquery.tablesorter.js")"></script>
+	<script type="text/javascript" src="@routes.Assets.at("js/morris-0.4.1.min.js")"></script>
+	<script type="text/javascript" src="@routes.Assets.at("js/raphael-2.1.0.min.js")"></script>
+	<script type="text/javascript" src="@routes.Assets.at("js/highcharts-3.0.9.min.js")"></script>
+	<script type="text/javascript" src="@routes.Assets.at("js/tooltip.js")"></script>
+	<script type="text/javascript" src="@routes.Assets.at("js/functions.js")"></script>
+	<script type="text/javascript" src="@routes.Assets.at("js/options.js")"></script>
 </head>
 
 
 <body class="@(if (hat != null) (hat.name.toLowerCase) else "")">
 
 	<div class="container">
-	
-		<section id="topnav" class="row">
-			@topnav.render(title)
-		</section>
-		
+		@if(hat != null) {
+			<section id="topnav" class="row">
+				@topnav.render(title)
+			</section>
+		}
 		<main>
-        	@content
-        </main>
-	        
+			@content
+		</main>
+			
 	</div>
 </body>
 </html>

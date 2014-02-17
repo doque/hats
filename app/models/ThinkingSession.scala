@@ -16,8 +16,10 @@ import play.Logger
  * The ThinkingSession models a whole session of the process. Don't read the code, read the comments ;-D
  * @author Nemo
  */
-case class ThinkingSession(id: Long, owner: User, title: String, currentHat: Hat) {
+case class ThinkingSession(id: Long, owner: User, title: String, currentHat: Hat, finished: Boolean) {
   def isOwner(user: User): Boolean = owner.id == user.id
+  val isFinished: Boolean = finished
+  val isRunning: Boolean = !finished
 }
 
 object ThinkingSession {
@@ -35,9 +37,10 @@ object ThinkingSession {
     get[Long]("id") ~
       get[Long]("owner") ~
       get[String]("title") ~
-      get[Long]("current_hat") map {
-        case id ~ ownerId ~ title ~ hatId =>
-          ThinkingSession(id, User.byId(ownerId).get, title, Hat.byId(hatId).get);
+      get[Long]("current_hat") ~
+      get[Boolean]("finished") map {
+        case id ~ ownerId ~ title ~ hatId ~ finished =>
+          ThinkingSession(id, User.byId(ownerId).get, title, Hat.byId(hatId).get, finished);
       }
   }
 
@@ -96,7 +99,10 @@ object ThinkingSession {
   def create(ownerId: Long, title: String, hatId: Long): Long = {
     val id = nextId()
     DB.withConnection { implicit connection =>
-      SQL("insert into thinking_session (id,owner,title,current_hat) values ({id},{ownerId},{title},{hatId})").on(
+      SQL("""
+          insert into thinking_session (id,owner,title,current_hat) 
+          values ({id},{ownerId},{title},{hatId})
+          """).on(
         'id -> id,
         'ownerId -> ownerId,
         'title -> title,
@@ -140,6 +146,9 @@ object ThinkingSession {
     }
   }
 
+  /**
+   * returns the join token for the user
+   */
   def addUser(session: ThinkingSession, user: User): Long = {
     addUser(session.id, user.id)
   }
@@ -148,19 +157,27 @@ object ThinkingSession {
    * returns the join token for the user
    */
   def addUser(sessionId: Long, userId: Long): Long = {
-    val createTime = (new Date()).getTime().toString()
     DB.withConnection { implicit connection =>
-      val token = (sessionId + userId + (new Date()).getTime() + Random.nextLong).hashCode
-      SQL("""
+      if (!ThinkingSession.checkUser(sessionId, userId)) {
+        val token = (sessionId + userId + (new Date()).getTime() + Random.nextLong).hashCode
+        SQL("""
           insert into participating (thinking_session,user,token) 
           values ({sessionId},{userId},{token})
           """).on(
-        'sessionId -> sessionId,
-        'userId -> userId,
-        'token -> token)
-        .executeUpdate()
-      Logger.debug("token = " + token + " for session " + sessionId)
-      token
+          'sessionId -> sessionId,
+          'userId -> userId,
+          'token -> token)
+          .executeUpdate()
+        token
+      } else {
+        SQL("""
+          SELECT token
+          FROM participating
+          WHERE thinking_session = {sessionId} AND user = {userId}  
+          """).on(
+          'sessionId -> sessionId,
+          'userId -> userId).as(get[Long]("token").single)
+      }
     }
   }
 
@@ -174,7 +191,7 @@ object ThinkingSession {
           select user 
           from participating 
           where thinking_session = {sessionId}
-          """").on(
+          """).on(
         'sessionId -> sessionId)
         .as(get[Long]("user") *)
     }
@@ -198,7 +215,7 @@ object ThinkingSession {
           select count(*) as num
           from participating 
           where thinking_session = {sessionId}
-          """").on(
+          """).on(
         'sessionId -> sessionId)
         .as(get[Int]("num").single)
     }
@@ -214,7 +231,7 @@ object ThinkingSession {
           select count(*) as num
           from participating 
           where thinking_session = {sessionId} and ready = 1
-          """").on(
+          """).on(
         'sessionId -> sessionId)
         .as(get[Int]("num").single)
     }
@@ -284,6 +301,21 @@ object ThinkingSession {
         .as((get[Date]("time").single))
     }
 
+  }
+
+  def finish(session: ThinkingSession): Int = {
+    finish(session.id)
+  }
+
+  def finish(sessionId: Long): Int = {
+    DB.withConnection { implicit connection =>
+      SQL("""
+          update thinking_session
+          set finished = 1
+          where id = {sessionId}
+          """).on(
+        'sessionId -> sessionId).executeUpdate()
+    }
   }
 
   def allUsersReady(session: ThinkingSession): Boolean = allUsersReady(session.id)

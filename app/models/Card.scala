@@ -24,21 +24,28 @@ case class Card(
   thinkingSession: ThinkingSession,
   content: String,
   hat: Hat,
-  creator: User) {
+  creator: User,
+  bucket: Option[Bucket]) {
 
-  def toJson(): JsObject = {
+  def toJson: JsObject = {
     Json.obj(
-      "id" -> this.id,
+      "cardId" -> this.id,
       "hat" -> this.hat.name.toLowerCase,
       "thinkingSessionId" -> this.thinkingSession.id,
       "content" -> this.content,
-      "username" -> this.creator.name)
+      "username" -> this.creator.name,
+      "bucketId" -> bucketId)
+  }
+
+  def bucketId: String = bucket match {
+    case Some(b) => b.id.toString
+    case None => null
   }
 }
 
 object Card {
 
-  val dummy: Card = Card(1, ThinkingSession.dummy, "dfsfafsd", Hat.dummy, User.dummy);
+  val dummy: Card = Card(1, ThinkingSession.dummy, "dfsfafsd", Hat.dummy, User.dummy, None);
 
   /**
    * ORM simple
@@ -49,10 +56,11 @@ object Card {
       get[Long]("thinking_session") ~
       get[String]("content") ~
       get[Long]("hat") ~
-      get[Long]("creator") map {
-        case id ~ thinkingSessionId ~ content ~ hatId ~ creatorId =>
+      get[Long]("creator") ~
+      (get[Long]("bucket")?) map {
+        case id ~ thinkingSessionId ~ content ~ hatId ~ creatorId ~ bucketId =>
           Card(id, ThinkingSession.byId(thinkingSessionId).get, content, Hat.byId(hatId).get,
-            User.byId(creatorId).get);
+            User.byId(creatorId).get, bucketId match { case Some(id) => Bucket.byId(id) case None => None });
       }
   }
 
@@ -176,7 +184,7 @@ object Card {
   }
 
   def listToJson(cards: List[Card]) = {
-    Json.toJson(cards.map(card => card.toJson()))
+    Json.toJson(cards.map(card => card.toJson))
   }
 
   def byOnlyInSession(sessionId: Long): List[Long] = {

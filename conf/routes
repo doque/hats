@@ -16,15 +16,9 @@ GET    /:id/join/:token						controllers.ThinkingSessions.join(id: Long, token: 
 
 # Session control
 GET    /:id                             	controllers.ThinkingSessions.index(id: Long)
-POST   /:id/closeSession                	controllers.ThinkingSessions.closeSession(id: Long)
+GET   /:id/closeSession                	controllers.ThinkingSessions.closeSession(id: Long)
 
-# rest
-POST   /rest/buckets/name/:bucketId 	 	controllers.Cards.renameBucket(bucketId:Long)
-POST   /rest/buckets/:bucketId/:cardId		controllers.Cards.addCardToBucket(bucketId:Long, cardId:Long)
-POST   /rest/buckets/:id					controllers.Cards.createBucket(id:Long)
-
-
-# User controll
+# User controls
 POST   /user/saveName	                	controllers.Users.saveName
 
 # Map static resources from the /public folder to the /assets URL path

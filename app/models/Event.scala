@@ -36,36 +36,40 @@ case class Event(
   }
 
   def getEventData: java.util.Map[String, String] = {
-
     val baseData = HashMap[String, String](
-      "thinkinSession" -> thinkingSession.id.toString,
+      "thinkingSessionId" -> thinkingSession.id.toString,
       "hat" -> hat.name.toLowerCase,
       "time" -> time.getTime().toString(),
       "username" -> userName,
-      "cardid" -> cardId,
-      "bucket" -> bucketId,
+      "cardId" -> cardId,
+      "bucketId" -> bucketId,
+      "bucketName" -> bucketName,
       "content" -> cardContent)
     JavaConversions.mapAsJavaMap(baseData)
   }
 
   def cardId: String = card match {
     case Some(c) => c.id.toString
-    case None => "null"
+    case None => null
   }
 
+  def bucketName: String = bucket match {
+    case Some(b) => b.name
+    case None => null
+  }
   def bucketId: String = bucket match {
     case Some(b) => b.id.toString
-    case None => "null"
+    case None => null
   }
 
   def cardContent = card match {
     case Some(c) => c.content
-    case None => "null"
+    case None => null
   }
 
   def userName = user match {
     case Some(u) => u.name
-    case None => "null"
+    case None => null
   }
 
   val hasCard: Boolean = card match {
@@ -79,7 +83,19 @@ case class Event(
   }
 }
 
+object EventType {
+  val createSession = "createSession"
+  val addCard = "addCard"
+  val addBucket = "addBucket"
+  val renameBucket = "renameBucket"
+  val addCardToBucket = "addCardToBucket"
+  val userJoin = "userJoin"
+  val moveHat = "moveHat"
+  val closeSession = "closeSession"
+}
+
 object Event {
+
   val dummy = Event(0, "dummyEvent", ThinkingSession.dummy, Hat.dummy, None, None, None, new Date())
 
   val DBParser = {
@@ -135,10 +151,10 @@ object Event {
   }
 
   def byThinkingSession(thinkingSession: ThinkingSession): List[Event] = {
-    byThinkingSession(thinkingSession.id)
+    byThinkingSessionId(thinkingSession.id)
   }
 
-  def byThinkingSession(thinkingSessionId: Long): List[Event] = {
+  def byThinkingSessionId(thinkingSessionId: Long): List[Event] = {
     DB.withConnection { implicit connection =>
       SQL("select * from event where thinking_session={id}").on(
         'id -> thinkingSessionId).as(DBParser *)
@@ -156,3 +172,4 @@ object Event {
     }
   }
 }
+

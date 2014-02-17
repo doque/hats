@@ -1,4 +1,4 @@
-@(session: ThinkingSession, cards: List[Card], hat: Hat, user: User, events: List[Event])
+@(session: ThinkingSession, cards: List[Card], buckets: List[Bucket], hat: Hat, user: User, creationEvent: Option[Event])
 
 @main(session.title, hat) {
 
@@ -11,19 +11,28 @@
 	<div id="hat" class="@hat.name.toLowerCase">
 
 		<script type="text/javascript">
-			@for(e <- events) {
-  				@if(e.eventType == "createSession") {
-  					var CREATION_TIME = new Date("@e.time");
-  					var userItem = "@e.user";
-  				}
-			}
+			@creationEvent match {
+			  case Some(event) => {
+			  	var CREATION_TIME = @event.time.getTime();
+				var CREATOR_NAME = "@event.userName";
+			  }
+			  case None => {
+			    var CREATION_TIME = new Date();
+				var CREATOR_NAME = "Unknown";
+			  }
+			}		
 			var CARDS = @Html(Card.listToJson(cards).toString);
+
+			var BUCKETS = @Html(Bucket.listToJson(buckets).toString);
+
+			
 			var SESSION_ID = @session.id;
 			var HAT = "@hat.name.toLowerCase";
 			var WSURI = "ws://" + window.location.host + "/wamp";
 			var CALL_URI = "http://sixhats.com/cards";
-            var USER_NAME = "@user.name";
-            var USER_ID = "@user.id"
+			var USER_NAME = "@user.name";
+			var USER_ID = "@user.id";
+			var CREATOR = @session.isOwner(user);
 			var TOOLTIPS = {
 				"white": "The White Hat calls for information known or needed. The facts, just the facts.",
 				"yellow": "The Yellow Hat symbolizes brightness and optimism. Under this hat you explore the positives and probe for value and benefit.",
@@ -116,50 +125,137 @@
 </div>
 
 
-
-<script id="bucket-template" type="text/x-handlebars-template">
-<div class="col-md-6">
-	<div class="bucket" data-bucketid="{{bucketId}}" id="bucket-{{bucketId}}">
-		<form>
-			<h4 class="hide"></h4>
-			<input type="text" class="form-control bucketname" data-bucketid="{{bucketId}}" placeholder="Name this Bucket"/>
-			<div class="row">
-				<div class="col-md-12">
-					<div class="cards">
-						<div class="placeholder text-center">Drag cards here</span>
-					</div>
-				</div>
-			</div>
-			<div class="row">
-				<div class="col-md-12">
-					<button type="button" class="pull-right btn btn-success addbucket">
-						Add Bucket
-						<span class="glyphicon glyphicon-plus"></span>
-					</button>
-				</div>
-			</div>
-		</form>
-	</div>
-</div>
-</script>
-
-<script id="card-template" type="text/x-handlebars-template">
-	<div data-cardid="{{cardid}}" class="card {{hat}}">
-		<span class="name">@@{{username}}:</span>
-		<div class="content">{{{content}}}</div>
-	</div>
-</script>	
-
+@handlebars.render
 
 <script type="text/javascript">
+
+	$(function() {
+
+		window.progressBar = new ProgressBar('#progressBar');
+		window.session = false;
+		// default socket eventData json, will be reused but never overwritten
+		window.eventData = {
+			thinkingSessionId: SESSION_ID,
+			userId: USER_ID,
+			hat: HAT
+		};
+
+		if (CREATOR === false) {
+			$('#indicate-ready, #indicate-finish').remove();
+		}
+
+
+		if (typeof BUCKETS !== "undefined" && BUCKETS.length > 0) {
+			$(BUCKETS).each(function() {
+				injectBucket(this);
+			});
+		}
+		// setup initial card setup
+		if (typeof CARDS !== "undefined" && CARDS.length > 0) {
+			$(CARDS).each(function() {
+				injectCard(linkify(this));
+				if (HAT === "blue" && this.bucketId !== null) {
+					addCardToBucket(this)
+				}
+			});
+		}
+
+
+		$('#modal-button').click(function() {
+			/* new user? */
+			var isNewUser = (USER_NAME === "New User");
+			/* force new user to enter name */
+			if (isNewUser) {
+				var name = $('#modal-username');
+				if (name.val() === "") {
+					name.parent().addClass('has-error');
+				} else {
+					jsRoutes.controllers.Users.saveName().ajax({
+						data : {
+							"name" : name.val(),
+							"thinkingSessionId" : SESSION_ID
+						},
+						success : function() {
+							USER_NAME = name.val();
+							name.parent().removeClass('has-error');
+							$('#first-time').remove();
+							$('#hatchange-modal').modal('hide');
+						}
+					});
+				}
+			} else {
+				$('#hatchange-modal').modal('hide');
+			}
+		});
+
+		$("#btnAddCard").click(function() {
+			var content = $("#content").val();
+			if (content.trim() === "") return; // no empty cards.
+
+			var newCard = $.extend({}, eventData, {
+				"content" : content,
+				"username" : USER_NAME
+			});
+			window.session.call(CALL_URI + "#addCard", newCard);
+			// store 
+			CARDS.push(newCard);
+		});
+
+		$('#indicate-ready').click(function() {
+			window.session.call(CALL_URI + "#moveHat", eventData);
+		});	
+
+
+		$(document).on('click', '.addbucket', function() {
+			window.session.call(CALL_URI + "#addBucket", window.eventData);
+		});
+
+		$(document).on('blur', '.bucketname', function() {
+			window.session.call(CALL_URI + "#renameBucket", $.extend({}, eventData, {
+				name: $(this).val(),
+				bucketId: $(this).data('bucketid')
+			}));
+		});
+		$(document).on('click', 'a.fancybox', function(e) {
+			e.preventDefault();
+			
+			var options = {
+				speed : "slow",
+				type: null
+			};
+
+			var $this = $(this);
+
+			if ($this.hasClass("image")) {
+				options.type = "image";
+			} else {
+				var href = $this.attr("href");
+				if (!!~href.indexOf("youtube.com/watch?v=")) {
+					$(this).attr("href", href.replace("watch?v=", "v/"));
+					options.type = "swf";
+				} else {
+					options.type = "iframe";
+				}
+			}
+			$.fancybox.open(this, options);
+		});
+
+		$('#indicate-finish').click(function() {
+			location.href = jsRoutes.controllers.ThinkingSessions.closeSession(SESSION_ID).url;
+			//"/" + SESSION_ID + "/dashboard";
+		});
+
+
+	});
+
 	//set up initial tooltip
 	$(window).load(function() {
-		setSessionData();
 		instantiateSocket();
 		if (USER_NAME !== "New User") {
 			$('#first-time').remove();
 		}
 		moveTo(HAT);
+		setSessionData();
 	});
 </script>
 

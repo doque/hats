@@ -1,0 +1,47 @@
+<script id="bucket-template" type="text/x-handlebars-template">
+<div class="col-md-6">
+	<div class="bucket" data-bucketid="{{bucketId}}" id="bucket-{{bucketId}}">
+		{{#if name}}
+			<h4>{{name}}</h4>
+		{{else}}
+			<h4 class="hide"></h4>
+			<input type="text" class="form-control bucketname" data-bucketid="{{bucketId}}" placeholder="Name this Bucket"/>
+		{{/if}}
+		<div class="row">
+			<div class="col-md-12">
+				<div class="cards">
+					<div class="placeholder text-center">Drag cards here</span>
+				</div>
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-12">
+				<button type="button" class="pull-right btn btn-success addbucket">
+					Add Bucket
+					<span class="glyphicon glyphicon-plus"></span>
+				</button>
+			</div>
+		</div>
+	</div>
+</div>
+</script>
+
+<script id="card-template" type="text/x-handlebars-template">
+	<div data-cardid="{{cardId}}" id="card-{{cardId}}" class="card {{hat}}">
+		<span class="name">@@{{username}}:</span>
+		<div class="content">
+			{{{content}}}
+			
+			{{#if url}}
+				<span class="glyphicon glyphicon-link"></span> 
+				<a class="fancybox" href="{{url}}">{{shortLink url}}</a>
+			{{else}}
+				{{#if imageUrl}}
+					<a class="fancybox image" href="{{imageUrl}}">
+						<img src="{{imageUrl}}" class="img-responsive img-thumbnail"/>
+					</a>
+				{{/if}}
+			{{/if}}
+		</div>
+	</div>
+</script>	
