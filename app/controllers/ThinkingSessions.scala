@@ -14,6 +14,7 @@ import com.feth.play.module.mail.Mailer.Mail.Body
 import views.html.defaultpages.notFound
 import scala.collection.JavaConversions
 import java.util.Date
+import java.net._
 import ws.wamplay.controllers.WAMPlayServer
 import play.templates.BaseScalaTemplate
 import org.joda.time.DateTime
@@ -153,10 +154,12 @@ object ThinkingSessions extends Controller with UserCookieHandler {
   def sendInviteMails(mails: List[(String, Long)], title: String, sessionId: scala.Long)(implicit request: Request[AnyContent]) {
     mails match {
       case (m, t) :: ms =>
-
-        val url = routes.ThinkingSessions.join(sessionId, toHexString(t)).absoluteURL(false)(request)
-        val body = new Body(views.txt.email.invite.render(title, url).toString(),
-          views.html.email.invite.render(title, url).toString());
+        val localhost = InetAddress.getLocalHost
+        val localIpAddress = localhost.getHostAddress()
+        val url = routes.ThinkingSessions.join(sessionId, toHexString(t)).url
+        val ipUrl = "http://" + localIpAddress + ":9000" + url
+        val body = new Body(views.txt.email.invite.render(title, ipUrl).toString(),
+          views.html.email.invite.render(title, ipUrl).toString());
         Mailer.getDefaultMailer().sendMail("Invite to Thinking Session", body, m);
         Logger.debug("Invited User " + m + " to thinking session " + title)
         sendInviteMails(ms, title, sessionId)
@@ -170,9 +173,12 @@ object ThinkingSessions extends Controller with UserCookieHandler {
   def sendCreatorMail(creator: User, token: Long, title: String, session: ThinkingSession)(implicit request: Request[AnyContent]) {
     creator.mail match {
       case Some(mail) =>
-        val url = routes.ThinkingSessions.join(session.id, toHexString(token)).absoluteURL(false)(request)
-        val body = new Body(views.txt.email.creator.render(title, url).toString(),
-          views.html.email.creator.render(title, url).toString());
+        val localhost = InetAddress.getLocalHost
+        val localIpAddress = localhost.getHostAddress
+        val url = routes.ThinkingSessions.join(session.id, toHexString(token)).url
+        val ipUrl = "http://" + localIpAddress + ":9000" + url
+        val body = new Body(views.txt.email.creator.render(title, ipUrl).toString(),
+          views.html.email.creator.render(title, ipUrl).toString());
         Mailer.getDefaultMailer().sendMail("Your Thinking Session is now Online!", body, mail);
         Logger.debug("Invited Creator " + creator.mail + " to thinking session " + title)
       case None =>

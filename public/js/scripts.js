@@ -1,3 +1,5 @@
+// get websocket up and running
+
 function instantiateSocket() {
 	ab.connect(WSURI, function(session) {
 		// store session
@@ -20,7 +22,7 @@ function instantiateSocket() {
 function setSessionData() {
     $('#session-info').html('Session time: ' + timeSince(CREATION_TIME));
     var date = $.datepicker.formatDate('dd/mm/yy', new Date(CREATION_TIME));
-    $('#feed-creation-time').html('Session was created on <strong>' + date + '</strong> by <strong>' + CREATOR_NAME) + '</strong>';
+    $('#feed-creation-time').html('<span class="glyphicon glyphicon-play-circle"></span> Session was created on <strong>' + date + '</strong> by <strong>' + CREATOR_NAME) + '</strong>';
 }
 
 // debugging handler for websocket events coming in
@@ -68,7 +70,9 @@ function moveTo(hat) {
 		prepareBlueHat();
 	}
 
-	window.progressBar.render()
+	window.progressBar.render();
+
+	feedMoveHat(HAT);
 
 }
 
@@ -163,6 +167,12 @@ function addCardToBucket(eventData) {
 function feedUserJoin(user) {
 	var userGlyph = '<span class="glyphicon glyphicon-user"></span>';
 	$('#feed').prepend('<li>' + userGlyph + ' User <strong>' + user.username + '</strong> joined.</li>');
+	$('#feed').children().first().effect('highlight',{}, 3000);
+}
+
+function feedMoveHat(hat) {
+	var hatGlyph = '<span class="glyphicon glyphicon-tag"></span>';
+	$('#feed').prepend('<li>' + hatGlyph + ' The group is now wearing the <strong>' + hat + '</strong> hat.</li><hr/>');
 	$('#feed').children().first().effect('highlight',{}, 3000);
 }
 
