@@ -141,7 +141,7 @@ ProgressBar.prototype.addTooltips = function(update) {
 		if (!update) {
 			$(this.container).find('circle.' + color).qtip({
 				content: {
-					text: users.length + ' users have added ' + addedCards + ' cards to the ' + color + ' hat so far. ' + contributors
+					text: users.length + ' users have added ' + addedCards + ' cards to the ' + color + ' hat:' + contributors
 				},
 				style: {
 					classes: 'qtip-bootstrap'
@@ -149,7 +149,7 @@ ProgressBar.prototype.addTooltips = function(update) {
 			});
 		} else {
 			var qapi = $(this.container).find('circle.' + hats[hat]).data('qtip');
-			var newContent = users.length + ' users have added ' + addedCards + ' cards to the ' + color + ' hat so far: ' + contributors
+			var newContent = users.length + ' users have added ' + addedCards + ' cards to the ' + color + ' hat:' + contributors
 			//var newContent = 'No. of cards in ' + hats[hat] + ' hat: ' + addedCards + contributors;
 			qapi.set('content.text', newContent);
 		}

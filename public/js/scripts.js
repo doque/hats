@@ -127,9 +127,13 @@ function injectCard(card) {
 	var template = Handlebars.compile($('#card-template').html());
 	var compiled = template(card);
 
-	$('#cards-list').append(compiled);
+	$('#cards-list').prepend(compiled);
 	// reset card content field
-	$('#content').val("");
+	// check against author
+	if (card.username == USER_NAME) {
+		$('#content').val("");
+	}
+	
 	$('#nocardsyet').remove();
 
 	window.progressBar.add(card);
@@ -181,8 +185,8 @@ function feedUserJoin(user) {
 
 function feedMoveHat(hat) {
 	var hatGlyph = '<span class="glyphicon glyphicon-tag"></span>';
-	$('#feed').prepend('<li>' + hatGlyph + ' The group is now wearing the <strong>' + hat + '</strong> hat.</li><hr/>');
-	$('#feed').children().first().effect('highlight',{}, 3000);
+	$('#feed').prepend('<li style="margin: 5px 0;">' + hatGlyph + ' You\'re now wearing a <strong>' + hat + '</strong> hat.</li>');
+	$('#feed').children().first().effect('highlight',{}, 5000);
 }
 
 Handlebars.registerHelper('shortLink', function(str) {

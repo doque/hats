@@ -10,7 +10,7 @@
 		<div class="row">
 			
 			<div class="col-md-8">
-				<h1 class="pull-left">@session.title - Summary and Statistics</h1>
+				<h1 class="pull-left">@session.title</h1>
 			</div>
 			<div class="col-md-4">
 				<div class="pull-right" style="margin-top: 20px;">
@@ -83,6 +83,7 @@
 		var CARDS = @Html(Card.listToJson(cards).toString);
 		var BUCKETS = @Html(Bucket.listToJson(buckets).toString);
 		var USER_ID = @user.id;
+		var USER_NAME = "@user.name";
 		var HAT = "@hat.name.toLowerCase";
 		window.progressBar = new ProgressBar('#progressBar');
 		window.progressBar.setBubbleSizes();
