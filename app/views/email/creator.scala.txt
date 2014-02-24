@@ -1,6 +1,6 @@
 @(title: String, url: String)
 
-Created Thinking Session about "@title"
+Your Session "@title" is now online
 
 Hi,
 

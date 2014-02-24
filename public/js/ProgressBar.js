@@ -12,14 +12,6 @@
 
  function ProgressBar(container, bubbles) {
  	this.container = container;
- 	this.bubbles = bubbles || {
- 		"blue": 5,
- 		"white": 5,
- 		"red": 5,
- 		"yellow": 5,
- 		"green": 5,
- 		"black": 5
- 	};
  	this.hats = [
  	"white",
  	"red",
@@ -43,11 +35,10 @@
  * @param card - a Card object that should be added to the progress bar
  */
  ProgressBar.prototype.add = function(card) {
-	//console.log("adding card: ", card);   
-	this.addTooltips(this.hats, true);
-	this.bubbles[card.hat]++;
+	// console.log("adding card: ", card);   
+	this.addTooltips(true);
 	this.render();
-	this.setBubbleSizes(this.bubbles);
+	this.setBubbleSizes();
 };
 
 /**
@@ -96,7 +87,7 @@
 	}
 
 
-	ProgressBar.prototype.setBubbleSizes = function(bubbles) {
+	ProgressBar.prototype.setBubbleSizes = function() {
 		var hatCards = {
 			"blue": 0,
 			"white": 0,
@@ -114,19 +105,15 @@
 			if (hatCards[hat] > max) max = hatCards[hat];
 		}
 
-	//console.log("max Cards is " + max);
+	console.log("max Cards is " + max);
 
 	var params = window.progressBar.algorithmParams;
 	for (var hat in hatCards) {
 		var cirque = $(this.container).find('circle.' + hat);
 		var size = bubbleSize(hatCards[hat], max, params);
-		//console.log("hat " + hat + " gets size " + size);
+		console.log("hat " + hat + " gets size " + size);
 		cirque.attr("r", size);
 	}
-	// for(var hat in bubbles) {
-	//  var cirque = $(this.container).find('circle.' + hat);
-	//  cirque.attr("r", bubbles[hat]);
-	// }
 }
 
 ProgressBar.prototype.addTooltips = function(update) {

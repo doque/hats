@@ -35,7 +35,8 @@ object Application extends Controller with UserCookieHandler {
       Routes.javascriptRouter("jsRoutes")(
         routes.javascript.ThinkingSessions.createSession,
         routes.javascript.Users.saveName,
-        routes.javascript.ThinkingSessions.closeSession)).as("text/javascript")
+        routes.javascript.ThinkingSessions.closeSession,
+        routes.javascript.Dashboard.showReport)).as("text/javascript")
   }
 
 }

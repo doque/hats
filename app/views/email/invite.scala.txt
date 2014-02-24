@@ -1,6 +1,6 @@
 @(title: String, url:String)
 
-Invite Thinking Session about "@title"
+Invite to Thinking Session about "@title"
 
 Hi,
 

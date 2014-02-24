@@ -197,8 +197,7 @@
 				"username" : USER_NAME
 			});
 			window.session.call(CALL_URI + "#addCard", newCard);
-			// store 
-			CARDS.push(newCard);
+			// websocket persists the card, not needed here
 		});
 
 		$('#indicate-ready').click(function() {
@@ -242,7 +241,6 @@
 
 		$('#indicate-finish').click(function() {
 			location.href = jsRoutes.controllers.ThinkingSessions.closeSession(SESSION_ID).url;
-			//"/" + SESSION_ID + "/dashboard";
 		});
 
 

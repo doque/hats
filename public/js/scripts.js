@@ -33,6 +33,9 @@ function onEvent(topic, event) {
 
 	// this is dirty.
     if (event.eventType === "addCard") {
+    	// push the card here, before injcetCard because inject card is also used in on Document ready.
+    	// But on Doc ready no cards should be added to the CARDS var, on Websoket Event they should
+    	CARDS.push(event.eventData); 
         injectCard(event.eventData);
     } else if (event.eventType === "moveHat") {
         moveTo(event.eventData.hat);
@@ -44,7 +47,13 @@ function onEvent(topic, event) {
     	addCardToBucket(event.eventData);
     } else if (event.eventType === "userJoin") {
     	feedUserJoin(event.eventData);
+    } else if(event.eventType === "closeSession") {
+    	closeSession()
     }
+}
+
+function closeSession() {
+	location.href = jsRoutes.controllers.Dashboard.showReport(SESSION_ID).url;
 }
 
 function moveTo(hat) {
